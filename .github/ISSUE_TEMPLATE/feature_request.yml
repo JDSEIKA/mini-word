@@ -1,0 +1,42 @@
+name: "Sugerencia"
+description: "Propón una función o una mejora de compatibilidad"
+title: "[Sugerencia]: "
+labels: ["enhancement", "beta-feedback"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Mini Word
+      placeholder: "0.0.1 Beta"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o necesidad
+      description: ¿Qué intentas hacer y qué te impide hacerlo?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - DOCX / compatibilidad con Word
+        - Tablas
+        - Imágenes, formas y cuadros de texto
+        - Encabezados y pies
+        - Ortografía
+        - Columnas y secciones
+        - Rendimiento
+        - Accesibilidad
+        - Instalación / distribución
+        - Otra
+    validations:
+      required: true

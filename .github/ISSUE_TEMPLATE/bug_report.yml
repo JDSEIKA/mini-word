@@ -1,0 +1,84 @@
+name: "Error / Bug"
+description: "Informa un fallo reproducible de Mini Word"
+title: "[Bug]: "
+labels: ["bug", "beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por probar Mini Word 0.0.1 Beta. Cuanto más pequeño sea el documento de ejemplo, más fácil será corregir el fallo.
+        **No adjuntes documentos confidenciales.** Elimina o sustituye el contenido privado antes de compartirlo.
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Mini Word
+      description: Aparece en el título o en Ayuda/Acerca de.
+      placeholder: "0.0.1 Beta"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Versión de Windows
+      placeholder: "Windows 11 23H2, Windows 10 22H2, Windows 7 SP1..."
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Formato del documento
+      options:
+        - DOCX
+        - DOC
+        - ODT
+        - RTF
+        - TXT
+        - Documento nuevo
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducirlo
+      description: Indica qué hiciste, en qué página y con qué herramienta.
+      placeholder: |
+        1. Abrí ...
+        2. Seleccioné ...
+        3. Arrastré ...
+        4. Al guardar ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado real
+    validations:
+      required: true
+  - type: textarea
+    id: document
+    attributes:
+      label: Documento de ejemplo
+      description: Si puedes, adjunta un DOCX mínimo sin datos privados. También sirve una captura.
+  - type: input
+    id: log
+    attributes:
+      label: Registro de fallos
+      description: Ruta del archivo CrashLog si apareció un error inesperado.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Comprobaciones
+      options:
+        - label: He eliminado datos personales o confidenciales del ejemplo.
+          required: true
+        - label: He comprobado que el fallo ocurre también en un documento nuevo o mínimo.
+          required: false
+        - label: Acepto que el ejemplo se use únicamente para reproducir y corregir el fallo.
+          required: true

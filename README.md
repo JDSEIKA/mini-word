@@ -6,6 +6,16 @@ El ejecutable es un único `MiniWord.exe` de unos **402 KB** y solo depende de .
 
 Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
+## Probar y reportar errores
+
+La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.1-beta).
+
+- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord.exe)
+- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord-Beta.zip)
+- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord-Installer.zip)
+
+Para reportar un fallo usa el [formulario de error](https://github.com/JDSEIKA/mini-word/issues/new?template=bug_report.yml). Incluye un DOCX mínimo sin datos privados, la versión de Windows y los pasos exactos. Más detalles en [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Formatos
 
 | Formato | Abrir | Guardar | Implementación |
