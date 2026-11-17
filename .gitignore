@@ -1,0 +1,16 @@
+# Build output
+dist/
+obj/
+bin/
+*.pdb
+*.user
+*.suo
+
+# Local test output
+tmp-*/
+test-output/
+test-out*/
+*.log
+
+# Local editor state
+.vs/

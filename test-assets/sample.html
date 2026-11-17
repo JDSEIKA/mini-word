@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Prueba integral de Mini Word</title>
+<style>
+@page { size: 29.7cm 21cm; margin: 2cm 2.5cm 2cm 2.5cm; }
+body { font-family: Georgia, serif; font-size: 12pt; color: #202020; }
+h1 { font-family: Calibri, sans-serif; color: #1F3864; font-size: 26pt; text-align: center; }
+h2 { font-family: Calibri, sans-serif; color: #2E74B5; font-size: 16pt; }
+p.center { text-align: center; }
+p.right { text-align: right; }
+p.justify { text-align: justify; }
+.big { font-size: 18pt; }
+.red { color: #C00000; }
+.highlight { background-color: #FFFF00; }
+.under { text-decoration: underline; }
+.strike { text-decoration: line-through; }
+table { border-collapse: collapse; width: 80%; }
+td, th { border: 1px solid #404040; padding: 4pt; }
+</style>
+</head>
+<body>
+<h1>Mini Word · Prueba integral</h1>
+<p class="center"><b>Negrita</b> · <i>Cursiva</i> · <u>Subrayado</u> · <s>Tachado</s> · <span class="red">Rojo</span> · <span class="highlight">Resaltado</span></p>
+<p class="center">Super<sup>índice</sup> y sub<sub>índice</sub>; ñandú, áéíóú, €, —, “comillas”.</p>
+<h2>Párrafos y tipografías</h2>
+<p class="justify">Este párrafo comprueba la alineación justificada, el tamaño de fuente y el espaciado entre líneas. La compatibilidad con Word 97-2003 exige leer correctamente la tabla de piezas, los estilos y las propiedades de párrafo del formato binario.</p>
+<p style="font-family: Calibri, sans-serif; font-size: 10pt;">Texto en Calibri de 10 puntos con <b>negrita</b>, <i>cursiva</i> y <span style="color:#0070C0">azul</span>.</p>
+<p class="right"><span class="big">Texto grande alineado a la derecha</span></p>
+<h2>Listas</h2>
+<ul>
+<li>Primera viñeta con acentos: ñ, á, é.</li>
+<li>Segunda viñeta con <b>negrita</b>.</li>
+<li>Tercera viñeta.</li>
+</ul>
+<ol>
+<li>Primer elemento numerado.</li>
+<li>Segundo elemento numerado.</li>
+<li>Tercer elemento numerado.</li>
+</ol>
+<h2>Tabla</h2>
+<table>
+<tr><th>Producto</th><th>Cantidad</th><th>Precio</th></tr>
+<tr><td>Cuaderno</td><td>2</td><td>3,50 €</td></tr>
+<tr><td>Lápiz</td><td>10</td><td>0,80 €</td></tr>
+<tr><td>Total</td><td></td><td>15,00 €</td></tr>
+</table>
+<h2>Imagen y enlace</h2>
+<p>Antes de la imagen. <img src="pixel.png" width="96" height="48" alt="muestra"> Después de la imagen.</p>
+<p>Visite <a href="https://example.com/miniword">example.com/miniword</a> para más información.</p>
+<p style="page-break-before: always;">Texto después de un salto de página manual.</p>
+<p><span style="font-family: 'Courier New', monospace;">Texto monoespaciado 12345</span> y una tabulación:	a	b.</p>
+</body>
+</html>
