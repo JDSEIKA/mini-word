@@ -4,7 +4,7 @@ Procesador de textos de escritorio para Windows con un **motor tipográfico prop
 
 El ejecutable es un único `MiniWord.exe` de unos **402 KB** y solo depende de .NET Framework 4.0 o posterior.
 
-Versión: **0.0.1 Beta**. Estado: **beta privada controlada**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
+Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
 ## Formatos
 

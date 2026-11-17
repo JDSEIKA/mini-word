@@ -55,4 +55,4 @@ Fecha: 2026-11-15
 
 ## Recomendación
 
-Usar como **beta privada controlada** para DOCX cotidianos. Mantener el original y el `.bak`, y validar en Word los documentos con campos, índices, gráficos o revisiones antes de usarlos en producción.
+Usar como **beta pública inicial** para DOCX cotidianos. Mantener el original y el `.bak`, y validar en Word los documentos con campos, índices, gráficos o revisiones antes de usarlos en producción.
