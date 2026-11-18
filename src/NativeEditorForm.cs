@@ -308,6 +308,7 @@ namespace WordPadClone
                 string name = Path.GetFileName(path);
                 if (string.IsNullOrEmpty(name)) name = path;
                 if (name.Length > 22) name = name.Substring(0, 19) + "...";
+                name = name.Replace("&", "&&");
                 ToolStripButton button = LargeButton(name, "open", delegate
                 {
                     if (File.Exists(recentPath)) OpenFile(recentPath);

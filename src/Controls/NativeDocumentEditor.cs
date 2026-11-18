@@ -6394,6 +6394,15 @@ namespace WordPadClone.Controls
 			{
 				_clipboardFloating = _selectedFloating.Clone();
 				_clipboardIsShape = true;
+				try
+				{
+					DataObject shapeData = new DataObject();
+					shapeData.SetData("MiniWord.Shape", "1");
+					Clipboard.SetDataObject(shapeData, true);
+				}
+				catch
+				{
+				}
 				return;
 			}
 			if (!HasSelection)
@@ -6463,6 +6472,12 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		private static bool HasShapeClipboard()
+		{
+			try { return Clipboard.ContainsData("MiniWord.Shape"); }
+			catch { return false; }
+		}
+
 		private bool TryPasteClipboardImage()
 		{
 			try
@@ -6505,7 +6520,7 @@ namespace WordPadClone.Controls
 				_cellEditor.Paste();
 				return;
 			}
-			if (_clipboardIsShape && _clipboardFloating != null)
+			if (_clipboardIsShape && _clipboardFloating != null && HasShapeClipboard())
 			{
 				PushUndo();
 				EnsureLayout();
