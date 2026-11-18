@@ -2328,7 +2328,21 @@ namespace WordPadClone.Formats
                     string mode = (string)item.Attribute("TargetMode");
                     string type = (string)item.Attribute("Type");
                     if (string.IsNullOrEmpty(target) || string.IsNullOrEmpty(type)) continue;
+                    string typeKey = type.ToLowerInvariant();
+                    if (typeKey.IndexOf("vba", StringComparison.Ordinal) >= 0
+                        || typeKey.IndexOf("activex", StringComparison.Ordinal) >= 0
+                        || typeKey.IndexOf("control", StringComparison.Ordinal) >= 0)
+                    {
+                        string warning = "El documento contiene relaciones de macros/ActiveX. Se descartan.";
+                        if (!model.SecurityWarnings.Contains(warning)) model.SecurityWarnings.Add(warning);
+                        continue;
+                    }
                     bool external = string.Equals(mode, "External", StringComparison.OrdinalIgnoreCase);
+                    if (external && typeKey.IndexOf("hyperlink", StringComparison.Ordinal) < 0)
+                    {
+                        string warning = "El documento contiene relaciones externas que no se descargan.";
+                        if (!model.SecurityWarnings.Contains(warning)) model.SecurityWarnings.Add(warning);
+                    }
                     string normalized = target;
                     if (!external)
                     {
