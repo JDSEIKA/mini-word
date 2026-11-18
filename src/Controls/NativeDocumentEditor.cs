@@ -3323,7 +3323,7 @@ namespace WordPadClone.Controls
 				for (int j = 0; j < line.Segments.Count; j++)
 				{
 					LayoutSegment segment = line.Segments[j];
-					if (string.IsNullOrEmpty(segment.Format.LinkUrl)) continue;
+					if (segment.Format == null || string.IsNullOrEmpty(segment.Format.LinkUrl)) continue;
 					RectangleF rect = new RectangleF(segment.X, segment.Y, segment.Width, segment.Height);
 					if (rect.Contains(x, y)) return segment.Format.LinkUrl;
 				}
@@ -6945,7 +6945,7 @@ namespace WordPadClone.Controls
 				if (run == null) continue;
 				int start = offset;
 				int end = offset + run.Text.Length;
-				if (position.Offset >= start && position.Offset <= end
+				if (run.Format != null && position.Offset >= start && position.Offset <= end
 					&& !string.IsNullOrEmpty(run.Format.LinkUrl))
 					return run.Format.LinkUrl;
 				offset = end;

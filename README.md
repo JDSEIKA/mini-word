@@ -11,7 +11,7 @@ Versión: **0.0.3 Beta**. Estado: **beta pública inicial**. El alcance y las li
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
 - [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 426 KB
-- SHA-256: F692A1D390541CF283965CC161A9FC960408D91BA6D8456C5B379F87937804B4
+- SHA-256: C6CE7D6E9BC70882042BADCD4E81DEE0FF8B9FFE887C0242B7F0034AA28D5C0B
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
