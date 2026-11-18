@@ -201,6 +201,22 @@ namespace WordPadClone.Controls
                         g.DrawLine(dark, 10, 12, 16, 12);
                         g.DrawLine(dark, 13, 9, 13, 16);
                         break;
+                    case "zoom-in":
+                        g.DrawEllipse(pen, 4, 4, 14, 14);
+                        g.DrawLine(pen, 16, 16, 27, 27);
+                        g.DrawLine(dark, 7, 11, 15, 11);
+                        g.DrawLine(dark, 11, 7, 11, 15);
+                        break;
+                    case "zoom-out":
+                        g.DrawEllipse(pen, 4, 4, 14, 14);
+                        g.DrawLine(pen, 16, 16, 27, 27);
+                        g.DrawLine(dark, 7, 11, 15, 11);
+                        break;
+                    case "zoom-reset":
+                        g.DrawRectangle(pen, 5, 5, 20, 22);
+                        using (Font percent = new Font("Segoe UI", 7f, FontStyle.Bold))
+                            g.DrawString("1:1", percent, accent, 8, 11);
+                        break;
                     case "find":
                         g.DrawEllipse(pen, 5, 5, 14, 14);
                         g.DrawLine(pen, 17, 17, 27, 27);

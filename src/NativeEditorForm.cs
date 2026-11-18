@@ -664,9 +664,9 @@ namespace WordPadClone
         private RibbonGroup BuildZoomGroup()
         {
             RibbonGroup group = NewGroup("Zoom");
-            group.Strip.Items.Add(IconButton("Acercar", "zoom", delegate { SetZoom(_editor.Zoom + 0.1f); }));
-            group.Strip.Items.Add(IconButton("Alejar", "zoom", delegate { SetZoom(_editor.Zoom - 0.1f); }));
-            group.Strip.Items.Add(IconButton("100%", "page", delegate { SetZoom(1f); }));
+            group.Strip.Items.Add(IconButton("Acercar", "zoom-in", delegate { SetZoom(_editor.Zoom + 0.1f); }));
+            group.Strip.Items.Add(IconButton("Alejar", "zoom-out", delegate { SetZoom(_editor.Zoom - 0.1f); }));
+            group.Strip.Items.Add(IconButton("100%", "zoom-reset", delegate { SetZoom(1f); }));
             return group;
         }
 
