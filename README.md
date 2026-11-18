@@ -2,7 +2,7 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **430 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **426 KB** y solo depende de .NET Framework 4.0 o posterior.
 
 Versión: **0.0.3 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
@@ -10,8 +10,8 @@ Versión: **0.0.3 Beta**. Estado: **beta pública inicial**. El alcance y las li
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 430 KB
-- SHA-256: 0F7A2532839ED1D9CF9AA033483FD6658F39B351AF50644C05C9B4AC3036D14D
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 426 KB
+- SHA-256: 922CCB7C0A9E62EB753C6AA06811310EFF2ADB62A54AB13D412BCF1B5BF41E5F
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
@@ -85,6 +85,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Lector MS-DOC con tabla de piezas, estilos, CHPX/PAPX, secciones, listas, tablas y campos.
 - Informe de compatibilidad y brechas: [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
 - Registro de fallos y auditorías por fecha: [`docs/FALLOS_2026-11-17.md`](docs/FALLOS_2026-11-17.md).
+- Accesibilidad de comandos: [`docs/ACCESIBILIDAD_FUNCIONES.md`](docs/ACCESIBILIDAD_FUNCIONES.md).
 - Auditoría de seguridad y recuento consolidado: [`docs/FALLOS_2026-11-18.md`](docs/FALLOS_2026-11-18.md).
 
 ## Compilar

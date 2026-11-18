@@ -639,13 +639,6 @@ namespace WordPadClone
             }
         }
 
-        private RibbonGroup BuildHeaderGroup()
-        {
-            RibbonGroup group = NewGroup("Encabezado y pie");
-            group.Strip.Items.Add(LargeButton("Editar encabezado y pie", "header", delegate { HeaderFooter(); }));
-            return group;
-        }
-
         private RibbonGroup BuildPageGroup()
         {
             RibbonGroup group = NewGroup("Página");

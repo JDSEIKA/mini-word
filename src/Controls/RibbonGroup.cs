@@ -9,7 +9,6 @@ namespace WordPadClone.Controls
     {
         public readonly ToolStrip Strip;
         private readonly Label _caption;
-        private Label _hint;
 
         public RibbonGroup(string caption)
         {
@@ -45,29 +44,6 @@ namespace WordPadClone.Controls
             _caption.BackColor = Color.Transparent;
             _caption.AutoEllipsis = true;
             Controls.Add(_caption, 0, 1);
-        }
-
-        public void SetHint(string text)
-        {
-            if (_hint == null)
-            {
-                RowCount = 3;
-                RowStyles.Clear();
-                RowStyles.Add(new RowStyle(SizeType.Absolute, 64f));
-                RowStyles.Add(new RowStyle(SizeType.Absolute, 15f));
-                RowStyles.Add(new RowStyle(SizeType.Absolute, 17f));
-                SetCellPosition(_caption, new TableLayoutPanelCellPosition(0, 2));
-                _hint = new Label();
-                _hint.Dock = DockStyle.Fill;
-                _hint.TextAlign = ContentAlignment.MiddleLeft;
-                _hint.Font = new Font("Segoe UI", 6.8f);
-                _hint.ForeColor = Color.FromArgb(110, 120, 132);
-                _hint.BackColor = Color.Transparent;
-                _hint.AutoEllipsis = true;
-                _hint.Margin = new Padding(3, 0, 3, 0);
-                Controls.Add(_hint, 0, 1);
-            }
-            _hint.Text = text ?? string.Empty;
         }
 
         protected override void OnPaint(PaintEventArgs e)
