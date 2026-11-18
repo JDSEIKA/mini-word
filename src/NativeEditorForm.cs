@@ -52,6 +52,8 @@ namespace WordPadClone
         private bool _autoSaveEnabled;
         private int _autoSaveMinutes = 5;
         private ToolStripButton _autoSaveButton;
+        private readonly List<string> _recentFiles = new List<string>();
+        private RibbonGroup _recentGroup;
         private string _recoveryPath;
         private bool _lossWarningAccepted;
 
@@ -99,6 +101,7 @@ namespace WordPadClone
             _autoSaveTimer.Interval = _autoSaveMinutes * 60000;
             _autoSaveTimer.Tick += delegate { AutoSaveNow(); };
             LoadAutoSaveSettings();
+            LoadRecentFiles();
 
             Load += delegate
             {
@@ -136,6 +139,8 @@ namespace WordPadClone
             TabPage file = NewRibbonPage("Archivo");
             FlowLayoutPanel fileFlow = NewRibbonFlow(file);
             fileFlow.Controls.Add(BuildFileTabGroup());
+            _recentGroup = BuildRecentGroup();
+            fileFlow.Controls.Add(_recentGroup);
             fileFlow.Controls.Add(BuildPrintGroup());
             fileFlow.Controls.Add(BuildAutoSaveGroup());
             tabs.TabPages.Add(file);
@@ -279,16 +284,130 @@ namespace WordPadClone
             return group;
         }
 
+        private RibbonGroup BuildRecentGroup()
+        {
+            RibbonGroup group = NewGroup("Recientes");
+            PopulateRecentGroup(group);
+            return group;
+        }
+
+        private void PopulateRecentGroup(RibbonGroup group)
+        {
+            group.Strip.Items.Clear();
+            if (_recentFiles.Count == 0)
+            {
+                ToolStripLabel empty = new ToolStripLabel("Sin documentos recientes");
+                empty.Enabled = false;
+                group.Strip.Items.Add(empty);
+                return;
+            }
+            for (int i = 0; i < _recentFiles.Count && i < 5; i++)
+            {
+                string path = _recentFiles[i];
+                string recentPath = path;
+                string name = Path.GetFileName(path);
+                if (string.IsNullOrEmpty(name)) name = path;
+                if (name.Length > 22) name = name.Substring(0, 19) + "...";
+                ToolStripButton button = LargeButton(name, "open", delegate
+                {
+                    if (File.Exists(recentPath)) OpenFile(recentPath);
+                    else
+                    {
+                        RemoveRecentFile(recentPath);
+                        MessageBox.Show(this, "El documento reciente ya no existe.",
+                            "Documentos recientes", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                });
+                button.ToolTipText = path;
+                group.Strip.Items.Add(button);
+            }
+        }
+
+        private void RefreshRecentGroup()
+        {
+            if (_recentGroup != null) PopulateRecentGroup(_recentGroup);
+        }
+
+        private void LoadRecentFiles()
+        {
+            _recentFiles.Clear();
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey("Software\\MiniWord"))
+                {
+                    if (key != null)
+                    {
+                        for (int i = 0; i < 5; i++)
+                        {
+                            string path = key.GetValue("Recent" + i) as string;
+                            if (string.IsNullOrEmpty(path) || !File.Exists(path)) continue;
+                            bool exists = false;
+                            for (int j = 0; j < _recentFiles.Count; j++)
+                                if (string.Equals(_recentFiles[j], path, StringComparison.OrdinalIgnoreCase))
+                                    exists = true;
+                            if (!exists) _recentFiles.Add(path);
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void SaveRecentFiles()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.CreateSubKey("Software\\MiniWord"))
+                {
+                    if (key == null) return;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        if (i < _recentFiles.Count) key.SetValue("Recent" + i, _recentFiles[i]);
+                        else key.DeleteValue("Recent" + i, false);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void AddRecentFile(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            try
+            {
+                string full = Path.GetFullPath(path);
+                if (!File.Exists(full)) return;
+                for (int i = _recentFiles.Count - 1; i >= 0; i--)
+                    if (string.Equals(_recentFiles[i], full, StringComparison.OrdinalIgnoreCase))
+                        _recentFiles.RemoveAt(i);
+                _recentFiles.Insert(0, full);
+                while (_recentFiles.Count > 5) _recentFiles.RemoveAt(_recentFiles.Count - 1);
+                SaveRecentFiles();
+                RefreshRecentGroup();
+            }
+            catch { }
+        }
+
+        private void RemoveRecentFile(string path)
+        {
+            for (int i = _recentFiles.Count - 1; i >= 0; i--)
+                if (string.Equals(_recentFiles[i], path, StringComparison.OrdinalIgnoreCase))
+                    _recentFiles.RemoveAt(i);
+            SaveRecentFiles();
+            RefreshRecentGroup();
+        }
+
         private RibbonGroup BuildClipboardGroup()
         {
             RibbonGroup group = NewGroup("Portapapeles");
             group.Strip.Items.Add(LargeButton("Pegar", "paste", delegate { _editor.Paste(); _editor.Focus(); }));
-            group.Strip.Items.Add(LargeButton("Pegar sin formato", "paste", delegate { _editor.PastePlainText(); _editor.Focus(); }));
+            ToolStripButton plainPaste = LargeButton("Pegar sin formato", "paste", delegate { _editor.PastePlainText(); _editor.Focus(); });
+            plainPaste.ToolTipText = "Solo texto: sin fuentes, tamaños, negritas ni colores";
+            group.Strip.Items.Add(plainPaste);
             group.Strip.Items.Add(IconButton("Cortar", "cut", delegate { _editor.Cut(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Copiar", "copy", delegate { _editor.Copy(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Deshacer", "undo", delegate { _editor.Undo(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Rehacer", "redo", delegate { _editor.Redo(); _editor.Focus(); }));
-            group.SetHint("Solo texto: sin fuentes, tamaños, negritas ni colores");
             return group;
         }
 
@@ -406,6 +525,15 @@ namespace WordPadClone
             RibbonGroup group = NewGroup("Imagen y fecha");
             group.Strip.Items.Add(LargeButton("Imagen", "image", delegate { InsertImage(); }));
             group.Strip.Items.Add(LargeButton("Fecha", "calendar", delegate { InsertDate(); }));
+            group.Strip.Items.Add(LargeButton("Ajuste de texto", "wrap", delegate
+            {
+                if (!_editor.ToggleSelectedImageWrap())
+                {
+                    MessageBox.Show(this, "Seleccione primero una imagen insertada.", "Ajuste de texto",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                _editor.Focus();
+            }));
             return group;
         }
 
@@ -450,24 +578,15 @@ namespace WordPadClone
                 }
                 _editor.Focus();
             }));
-            group.Strip.Items.Add(IconButton("Ajuste de texto", "wrap", delegate
-            {
-                if (!_editor.ToggleSelectedImageWrap())
-                {
-                    MessageBox.Show(this, "Seleccione primero una imagen insertada.", "Ajuste de texto",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                _editor.Focus();
-            }));
-            group.Strip.Items.Add(IconButton("Traer al frente", "shape", delegate
+            group.Strip.Items.Add(LargeButton("Traer al frente", "shape", delegate
             {
                 if (!_editor.BringSelectedFloatingToFront()) _editor.Focus();
             }));
-            group.Strip.Items.Add(IconButton("Enviar al fondo", "shape", delegate
+            group.Strip.Items.Add(LargeButton("Enviar al fondo", "shape", delegate
             {
                 if (!_editor.SendSelectedFloatingToBack()) _editor.Focus();
             }));
-            group.Strip.Items.Add(IconButton("Rotar 90°", "shape", delegate
+            group.Strip.Items.Add(LargeButton("Rotar 90°", "shape", delegate
             {
                 if (!_editor.RotateSelectedFloating(90)) _editor.Focus();
             }));
@@ -1127,6 +1246,7 @@ namespace WordPadClone
                         + "\n\nMini Word no ejecuta macros, scripts ni controles ActiveX.",
                         "Contenido potencialmente activo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
+                AddRecentFile(path);
 
 
             }
@@ -1196,6 +1316,7 @@ namespace WordPadClone
                 ClearRecoveryFiles();
                 UpdateTitle();
                 UpdateStatus();
+                AddRecentFile(path);
                 return true;
             }
             catch (Exception ex)
