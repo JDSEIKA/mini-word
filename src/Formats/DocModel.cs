@@ -342,6 +342,7 @@ namespace WordPadClone.Formats
         public int BorderSize;
         public bool Bold;
         public bool Italic;
+        public string LinkUrl;
         public RunFormat Format;
 
         public TableCell Clone()
@@ -357,6 +358,7 @@ namespace WordPadClone.Formats
                 BorderSize = BorderSize,
                 Bold = Bold,
                 Italic = Italic,
+                LinkUrl = LinkUrl,
                 Format = Format == null ? null : Format.Clone()
             };
         }
@@ -491,6 +493,7 @@ namespace WordPadClone.Formats
         public int OffsetYTwips;
         public TextWrapMode Wrap = TextWrapMode.Square;
         public bool BehindText;
+        public int Rotation;
 
         public FloatingObject Clone()
         {

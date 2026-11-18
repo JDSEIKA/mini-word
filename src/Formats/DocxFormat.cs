@@ -116,6 +116,27 @@ namespace WordPadClone.Formats
                     link.Url = text.Format.LinkUrl;
                     hyperlinks.Add(link);
                 }
+                p.EnsureTableCells();
+                if (p.TableCells != null)
+                {
+                    for (int r = 0; r < p.TableCells.Length; r++)
+                    {
+                        if (p.TableCells[r] == null) continue;
+                        for (int c = 0; c < p.TableCells[r].Length; c++)
+                        {
+                            TableCell cell = p.TableCells[r][c];
+                            if (cell == null || string.IsNullOrEmpty(cell.LinkUrl)) continue;
+                            bool exists = false;
+                            for (int k = 0; k < hyperlinks.Count; k++)
+                                if (string.Equals(hyperlinks[k].Url, cell.LinkUrl, StringComparison.Ordinal)) { exists = true; break; }
+                            if (exists) continue;
+                            HyperlinkPart link = new HyperlinkPart();
+                            link.RelId = "rIdLink" + (hyperlinks.Count + 1);
+                            link.Url = cell.LinkUrl;
+                            hyperlinks.Add(link);
+                        }
+                    }
+                }
             }
             entries.Add(new ZipEntryData("[Content_Types].xml", BuildContentTypes(doc, images, hasLists, headers, footers, hasFootnotes, hasEndnotes, hasComments, embedded), true));
             entries.Add(new ZipEntryData("_rels/.rels", BuildRootRels(), true));
@@ -519,7 +540,7 @@ namespace WordPadClone.Formats
                             bool close = si + 1 < doc.Sections.Count && pi == end;
                             if (paragraph.TableRows != null)
                             {
-                                WriteTable(w, paragraph);
+                                WriteTable(w, paragraph, hyperlinks);
                                 if (close)
                                 {
                                     w.WriteStartElement("w", "p", W.NamespaceName);
@@ -723,7 +744,7 @@ namespace WordPadClone.Formats
             w.WriteEndElement();
         }
 
-        private static void WriteTable(XmlWriter w, Paragraph p)
+        private static void WriteTable(XmlWriter w, Paragraph p, List<HyperlinkPart> hyperlinks)
         {
             p.EnsureTableCells();
             if (p.TableRows == null && p.TableCells != null) p.SyncTableRows();
@@ -792,7 +813,7 @@ namespace WordPadClone.Formats
                     TableCell owner = FindOwnerCell(tableCells, r, c);
                     if (owner == null)
                     {
-                        WriteTableCell(w, string.Empty, 1, 1, false, cellWidth, null);
+                        WriteTableCell(w, string.Empty, 1, 1, false, cellWidth, null, hyperlinks);
                         c++;
                         continue;
                     }
@@ -800,12 +821,12 @@ namespace WordPadClone.Formats
                     FindOwnerPosition(tableCells, owner, out ownerRow, out ownerColumn);
                     if (ownerRow == r && ownerColumn == c)
                     {
-                        WriteTableCell(w, owner.Text, Math.Max(1, owner.ColSpan), Math.Max(1, owner.RowSpan), false, cellWidth, owner);
+                        WriteTableCell(w, owner.Text, Math.Max(1, owner.ColSpan), Math.Max(1, owner.RowSpan), false, cellWidth, owner, hyperlinks);
                         c += Math.Max(1, owner.ColSpan);
                     }
                     else if (ownerRow < r)
                     {
-                        if (ownerColumn == c) WriteTableCell(w, string.Empty, 1, 1, true, cellWidth, owner);
+                        if (ownerColumn == c) WriteTableCell(w, string.Empty, 1, 1, true, cellWidth, owner, hyperlinks);
                         c++;
                     }
                     else if (ownerRow == r && ownerColumn < c)
@@ -814,7 +835,7 @@ namespace WordPadClone.Formats
                     }
                     else
                     {
-                        WriteTableCell(w, string.Empty, 1, 1, false, cellWidth, null);
+                        WriteTableCell(w, string.Empty, 1, 1, false, cellWidth, null, hyperlinks);
                         c++;
                     }
                 }
@@ -824,7 +845,7 @@ namespace WordPadClone.Formats
         }
 
         private static void WriteTableCell(XmlWriter w, string text, int colSpan, int rowSpan,
-            bool verticalContinue, int cellWidth, TableCell cell)
+            bool verticalContinue, int cellWidth, TableCell cell, List<HyperlinkPart> hyperlinks)
         {
             w.WriteStartElement("w", "tc", W.NamespaceName);
             w.WriteStartElement("w", "tcPr", W.NamespaceName);
@@ -873,6 +894,12 @@ namespace WordPadClone.Formats
             }
             w.WriteEndElement();
             w.WriteStartElement("w", "p", W.NamespaceName);
+            string cellLinkId = cell != null ? HyperlinkRelId(hyperlinks, cell.LinkUrl) : null;
+            if (!string.IsNullOrEmpty(cellLinkId))
+            {
+                w.WriteStartElement("w", "hyperlink", W.NamespaceName);
+                w.WriteAttributeString("r", "id", R.NamespaceName, cellLinkId);
+            }
             if (!string.IsNullOrEmpty(text))
             {
                 w.WriteStartElement("w", "r", W.NamespaceName);
@@ -890,8 +917,18 @@ namespace WordPadClone.Formats
                 w.WriteEndElement();
                 w.WriteEndElement();
             }
+            if (!string.IsNullOrEmpty(cellLinkId)) w.WriteEndElement();
             w.WriteEndElement();
             w.WriteEndElement();
+        }
+
+        private static string HyperlinkRelId(List<HyperlinkPart> hyperlinks, string url)
+        {
+            if (hyperlinks == null || string.IsNullOrEmpty(url)) return null;
+            for (int i = 0; i < hyperlinks.Count; i++)
+                if (string.Equals(hyperlinks[i].Url, url, StringComparison.Ordinal))
+                    return hyperlinks[i].RelId;
+            return null;
         }
 
         private static TableCell FindOwnerCell(TableCell[][] cells, int row, int column)
@@ -1497,6 +1534,8 @@ namespace WordPadClone.Formats
             w.WriteEndElement();
             w.WriteEndElement();
             w.WriteStartElement("pic", "spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture");
+            if (floating.Rotation % 360 != 0)
+                w.WriteAttributeString("rot", ((((long)floating.Rotation % 360 + 360) % 360) * 60000L).ToString(CultureInfo.InvariantCulture));
             w.WriteStartElement("a", "xfrm", A.NamespaceName);
             w.WriteStartElement("a", "off", A.NamespaceName);
             w.WriteAttributeString("x", "0");
@@ -1813,6 +1852,9 @@ namespace WordPadClone.Formats
                 + "pt;width:" + width.ToString(CultureInfo.InvariantCulture)
                 + "pt;height:" + height.ToString(CultureInfo.InvariantCulture)
                 + "pt;z-index:" + (floating.BehindText ? -1 : 1)
+                + (floating.Rotation % 360 != 0
+                    ? ";rotation:" + (((floating.Rotation % 360) + 360) % 360).ToString(CultureInfo.InvariantCulture) + "deg"
+                    : string.Empty)
                 + ";mso-position-horizontal-relative:page;mso-position-vertical-relative:page;mso-wrap-style:" + wrap;
         }
 
@@ -2971,6 +3013,14 @@ namespace WordPadClone.Formats
                 ReadExtent(extent, obj);
                 obj.OffsetXTwips = ReadPosition(anchor, "positionH");
                 obj.OffsetYTwips = ReadPosition(anchor, "positionV");
+                XElement rotationTransform = drawing.Descendants(A + "xfrm").FirstOrDefault();
+                if (rotationTransform != null)
+                {
+                    long rotationValue;
+                    if (long.TryParse((string)rotationTransform.Attribute("rot"), NumberStyles.Integer,
+                        CultureInfo.InvariantCulture, out rotationValue))
+                        obj.Rotation = (int)((rotationValue / 60000L) % 360L);
+                }
                 obj.BehindText = string.Equals((string)anchor.Attribute("behindDoc"), "1", StringComparison.OrdinalIgnoreCase)
                     || string.Equals((string)anchor.Attribute("behindDoc"), "true", StringComparison.OrdinalIgnoreCase);
                 obj.Wrap = ReadWrap(anchor);
@@ -3075,6 +3125,18 @@ namespace WordPadClone.Formats
                     int offset;
                     if (TryCssSignedLength(style, "margin-left", out offset)) obj.OffsetXTwips = offset;
                     if (TryCssSignedLength(style, "margin-top", out offset)) obj.OffsetYTwips = offset;
+                    int rotationAt = style.IndexOf("rotation:", StringComparison.OrdinalIgnoreCase);
+                    if (rotationAt >= 0)
+                    {
+                        int valueAt = rotationAt + "rotation:".Length;
+                        int valueEnd = valueAt;
+                        while (valueEnd < style.Length && (char.IsDigit(style[valueEnd]) || style[valueEnd] == '-'))
+                            valueEnd++;
+                        int rotationValue;
+                        if (valueEnd > valueAt && int.TryParse(style.Substring(valueAt, valueEnd - valueAt),
+                            NumberStyles.Integer, CultureInfo.InvariantCulture, out rotationValue))
+                            obj.Rotation = ((rotationValue % 360) + 360) % 360;
+                    }
                     if (style.IndexOf("mso-wrap-style:topAndBottom", StringComparison.OrdinalIgnoreCase) >= 0)
                         obj.Wrap = TextWrapMode.TopAndBottom;
                     else if (style.IndexOf("mso-wrap-style:none", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -3381,6 +3443,13 @@ namespace WordPadClone.Formats
                         TableCell cell = new TableCell();
                         cell.Text = cellText.ToString();
                         cell.ColSpan = gridSpan;
+                        XElement cellLink = tc.Descendants(W + "hyperlink").FirstOrDefault();
+                        if (cellLink != null)
+                        {
+                            string cellRid = (string)cellLink.Attribute(R + "id");
+                            if (!string.IsNullOrEmpty(cellRid) && _rels.ContainsKey(cellRid))
+                                cell.LinkUrl = _rels[cellRid];
+                        }
                         XElement firstRun = null;
                         foreach (XElement run in tc.Descendants(W + "r"))
                         {

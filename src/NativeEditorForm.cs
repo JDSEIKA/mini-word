@@ -459,6 +459,18 @@ namespace WordPadClone
                 }
                 _editor.Focus();
             }));
+            group.Strip.Items.Add(IconButton("Traer al frente", "shape", delegate
+            {
+                if (!_editor.BringSelectedFloatingToFront()) _editor.Focus();
+            }));
+            group.Strip.Items.Add(IconButton("Enviar al fondo", "shape", delegate
+            {
+                if (!_editor.SendSelectedFloatingToBack()) _editor.Focus();
+            }));
+            group.Strip.Items.Add(IconButton("Rotar 90°", "shape", delegate
+            {
+                if (!_editor.RotateSelectedFloating(90)) _editor.Focus();
+            }));
             return group;
         }
 
@@ -467,7 +479,22 @@ namespace WordPadClone
             RibbonGroup group = NewGroup("Insertar");
             group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
             group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
+            group.Strip.Items.Add(LargeButton("Hipervínculo", "link", delegate { EditHyperlink(); }));
             return group;
+        }
+
+        private void EditHyperlink()
+        {
+            using (HyperlinkDialog dialog = new HyperlinkDialog(_editor.SelectedHyperlinkUrl))
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                if (_editor.ApplyHyperlink(dialog.Url))
+                {
+                    _dirty = true;
+                    UpdateTitle();
+                }
+                _editor.Focus();
+            }
         }
 
         private RibbonGroup BuildHeaderGroup()

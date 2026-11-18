@@ -2,7 +2,7 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **417 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **422 KB** y solo depende de .NET Framework 4.0 o posterior.
 
 Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
@@ -10,8 +10,8 @@ Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las li
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 417 KB
-- SHA-256: 59764965BE06BDAA7FF3CCC185634BADB7EFDD862A6F707C718819F127C2A627
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 422 KB
+- SHA-256: 3BCED8CE3E4E23942D953CA39DA23ABEC8E5AC8C8D22A0EC24BBD14311A0BF7A
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
@@ -72,7 +72,9 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Encabezados y pies editables con `{PAGE}` y `{NUMPAGES}`; se guardan en DOCX y se dibujan en pantalla, impresión y vista previa.
 - Crear página con `Ctrl+Enter`, saltos de página, buscar/reemplazar, deshacer/rehacer, cortar/copiar/pegar e impresión.
 - **Compatibilidad de objetos**: formas y cuadros de texto se exportan como VML para Word 2007/2010+ y LibreOffice; las imágenes flotantes usan anclas relativas a página. Esto evita que cambien de página al abrirlas.
-- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con `Ctrl+Click` se muestra el destino y se pide autorización antes de abrirlo.
+- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con `Ctrl+Click` se muestra el destino y se pide autorización antes de abrirlo. El botón **Hipervínculo** permite crear o editar enlaces; también se admiten enlaces por celda completa en tablas.
+- **Orden Z y rotación**: **Traer al frente**, **Enviar al fondo** y **Rotar 90°** para formas, imágenes y cuadros de texto.
+- **Enlaces en tablas**: enlace por celda completa, con color azul, subrayado, clic y conservación en DOCX.
 - **Pegar sin formato**: `Ctrl+Shift+V` o el botón de la cinta inserta solo el texto, con el formato base del documento.
 - **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
 - **Corrección de codificación al pegar**: repara texto UTF-8 que Windows entrega como Windows-1252, por ejemplo `tambiÃÂ©n` → `también`.
@@ -80,6 +82,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Lector OOXML compatible con paquetes *Transitional* y *Strict* (normalización de espacios de nombres).
 - Lector MS-DOC con tabla de piezas, estilos, CHPX/PAPX, secciones, listas, tablas y campos.
 - Informe de compatibilidad y brechas: [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
+- Registro de fallos y auditorías por fecha: [`docs/FALLOS_2026-11-17.md`](docs/FALLOS_2026-11-17.md).
 
 ## Compilar
 

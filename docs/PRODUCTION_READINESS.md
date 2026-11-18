@@ -265,7 +265,7 @@ Para beta privada controlada faltan sobre todo **4, 5, 6, 8 y 9**. Para beta pú
 - DOCX real de 1,4 MB: lectura **18 ms** y guardado **53 ms**; la copia conservó 342 párrafos, 2 tablas y 1 imagen, con 12 secciones.
 - Inserción de 8 formas y 5 imágenes sin bloqueo.
 - Guardado de formas con color y contorno: `COLORS=True`.
-- Proyecto: 39 archivos C#, ~20.000 líneas; ejecutable de ~412 KB.
+- Proyecto: 39 archivos C#, ~20.000 líneas; ejecutable de ~414 KB.
 - Se detectaron 62 bloques `catch`, 36 de ellos vacíos; los críticos de apertura, guardado, recuperación y autoguardado ya registran en el log.
 - El guardado de usuario ya usa `AtomicFile` y deja `.bak`; la escritura ZIP interna directa solo se usa sobre el temporal.
 - Límites añadidos: paquete ZIP de 64 MB, 4096 entradas, 128 MB por entrada, 256 MB descomprimidos, XML de 64 MB, imagen de 32 MB y 50 megapíxeles.

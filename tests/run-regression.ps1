@@ -59,6 +59,18 @@ try {
     finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw "clipboard smoke failed" }
 
+    $featureTest = Join-Path $PSScriptRoot "FeatureAudit.cs"
+    $featureExe = Join-Path $tmp "FeatureAudit.exe"
+    & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `
+        "/out:$featureExe" `
+        /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Xml.dll /r:System.Xml.Linq.dll `
+        $source $featureTest
+    if ($LASTEXITCODE -ne 0) { throw "feature audit compile failed" }
+    Push-Location $root
+    try { & $featureExe }
+    finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { throw "feature audit failed" }
+
     Write-Output "REGRESSION=PASS"
 }
 finally {

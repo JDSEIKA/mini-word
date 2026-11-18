@@ -385,6 +385,11 @@ namespace WordPadClone.Controls
                     case "wordcount":
                         g.DrawString("Aa", new Font("Segoe UI", 10f, FontStyle.Bold), accent, 2, 8);
                         break;
+                    case "link":
+                        g.DrawArc(pen, 5, 11, 13, 10, 40, 220);
+                        g.DrawArc(pen, 14, 11, 13, 10, 220, 220);
+                        g.DrawLine(dark, 12, 16, 20, 16);
+                        break;
                     default:
                         g.DrawEllipse(pen, 7, 7, 18, 18);
                         g.DrawLine(dark, 16, 11, 16, 21);

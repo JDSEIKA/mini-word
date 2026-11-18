@@ -2137,6 +2137,31 @@ namespace WordPadClone.Controls
 
 		private void DrawFloating(Graphics g, LayoutFloating floating)
 		{
+			FloatingObject obj = floating.Object;
+			int rotation = obj == null ? 0 : ((obj.Rotation % 360) + 360) % 360;
+			if (rotation == 0)
+			{
+				DrawFloatingCore(g, floating);
+				return;
+			}
+			GraphicsState state = g.Save();
+			try
+			{
+				float centerX = floating.X + floating.Width / 2f;
+				float centerY = floating.Y + floating.Height / 2f;
+				g.TranslateTransform(centerX, centerY);
+				g.RotateTransform(rotation);
+				g.TranslateTransform(-centerX, -centerY);
+				DrawFloatingCore(g, floating);
+			}
+			finally
+			{
+				g.Restore(state);
+			}
+		}
+
+		private void DrawFloatingCore(Graphics g, LayoutFloating floating)
+		{
 			FloatingObject @object = floating.Object;
 			RectangleF rect = new RectangleF(floating.X, floating.Y, floating.Width, floating.Height);
 			if (@object.Kind == FloatingKind.Image && @object.Image != null)
@@ -2348,9 +2373,20 @@ namespace WordPadClone.Controls
 								};
 							}
 							Font font2 = GetFont(cellFormat);
-							using (Brush cellText = new SolidBrush(cellFormat.ForeColor ?? Color.Black))
+							bool cellLink = !string.IsNullOrEmpty(layoutTableCell.Cell.LinkUrl);
+							Color cellColor = cellLink ? Color.FromArgb(0, 82, 204)
+								: (cellFormat.ForeColor ?? Color.Black);
+							using (Brush cellText = new SolidBrush(cellColor))
 							{
 								g.DrawString(layoutTableCell.Cell.Text, font2, cellText, layoutRectangle, stringFormat);
+								if (cellLink)
+								{
+									SizeF measured = g.MeasureString(layoutTableCell.Cell.Text, font2);
+									float lineY = layoutRectangle.Y + Math.Min(layoutRectangle.Height - 2f, font2.GetHeight());
+									using (Pen linkPen = new Pen(cellColor))
+										g.DrawLine(linkPen, layoutRectangle.X, lineY,
+											layoutRectangle.X + Math.Min(layoutRectangle.Width, measured.Width), lineY);
+								}
 							}
 						}
 					}
@@ -3286,6 +3322,17 @@ namespace WordPadClone.Controls
 					if (string.IsNullOrEmpty(segment.Format.LinkUrl)) continue;
 					RectangleF rect = new RectangleF(segment.X, segment.Y, segment.Width, segment.Height);
 					if (rect.Contains(x, y)) return segment.Format.LinkUrl;
+				}
+			}
+			for (int i = 0; i < _tables.Count; i++)
+			{
+				for (int j = 0; j < _tables[i].Cells.Count; j++)
+				{
+					LayoutTableCell cell = _tables[i].Cells[j];
+					if (cell.Cell == null || string.IsNullOrEmpty(cell.Cell.LinkUrl)) continue;
+					if (x >= cell.X && x <= cell.X + cell.Width
+						&& y >= cell.Y && y <= cell.Y + cell.Height)
+						return cell.Cell.LinkUrl;
 				}
 			}
 			return null;
@@ -5670,6 +5717,49 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		public bool RotateSelectedFloating(int degrees)
+		{
+			if (_selectedFloating == null) return false;
+			PushUndo();
+			_selectedFloating.Rotation = ((_selectedFloating.Rotation + degrees) % 360 + 360) % 360;
+			InvalidateLayout(true);
+			OnTextChanged();
+			Invalidate();
+			return true;
+		}
+
+		public bool BringSelectedFloatingToFront()
+		{
+			return MoveSelectedFloating(true);
+		}
+
+		public bool SendSelectedFloatingToBack()
+		{
+			return MoveSelectedFloating(false);
+		}
+
+		private bool MoveSelectedFloating(bool toFront)
+		{
+			FloatingObject selected = _selectedFloating;
+			if (selected == null) return false;
+			for (int p = 0; p < _document.Paragraphs.Count; p++)
+			{
+				List<FloatingObject> list = _document.Paragraphs[p].FloatingObjects;
+				int index = list.IndexOf(selected);
+				if (index < 0) continue;
+				if ((toFront && index == list.Count - 1) || (!toFront && index == 0)) return true;
+				PushUndo();
+				list.RemoveAt(index);
+				if (toFront) list.Add(selected);
+				else list.Insert(0, selected);
+				InvalidateLayout(true);
+				OnTextChanged();
+				Invalidate();
+				return true;
+			}
+			return false;
+		}
+
 		public bool SetSelectedShapeFormat(Color fill, Color border, int borderSize)
 		{
 			FloatingObject shape = SelectedShape;
@@ -6741,6 +6831,109 @@ namespace WordPadClone.Controls
 			p.Inlines.Clear();
 			p.Inlines.AddRange(result);
 			MergeRuns(p);
+		}
+
+		private string LinkAtPosition(CaretPos position)
+		{
+			if (position.P < 0 || position.P >= _document.Paragraphs.Count) return null;
+			Paragraph paragraph = _document.Paragraphs[position.P];
+			int offset = 0;
+			for (int i = 0; i < paragraph.Inlines.Count; i++)
+			{
+				TextInline run = paragraph.Inlines[i] as TextInline;
+				if (run == null) continue;
+				int start = offset;
+				int end = offset + run.Text.Length;
+				if (position.Offset >= start && position.Offset <= end
+					&& !string.IsNullOrEmpty(run.Format.LinkUrl))
+					return run.Format.LinkUrl;
+				offset = end;
+			}
+			return null;
+		}
+
+		public string SelectedHyperlinkUrl
+		{
+			get
+			{
+				if (IsEditingTableCell && _cellEdit != null && _cellEdit.Cell != null)
+					return _cellEdit.Cell.LinkUrl;
+				if (_tableSelectionParagraph >= 0 && _tableSelectionParagraph < _document.Paragraphs.Count)
+				{
+					Paragraph table = _document.Paragraphs[_tableSelectionParagraph];
+					table.EnsureTableCells();
+					if (table.TableCells != null)
+					{
+						int r = Math.Max(0, Math.Min(table.TableCells.Length - 1,
+							Math.Min(_tableSelectionStartRow, _tableSelectionEndRow)));
+						if (r >= 0 && table.TableCells[r] != null)
+						{
+							int c = Math.Max(0, Math.Min(table.TableCells[r].Length - 1,
+								Math.Min(_tableSelectionStartColumn, _tableSelectionEndColumn)));
+							if (c >= 0 && table.TableCells[r][c] != null)
+								return table.TableCells[r][c].LinkUrl;
+						}
+					}
+				}
+				if (!HasSelection) return LinkAtPosition(_caret);
+				CaretPos start;
+				CaretPos end;
+				NormalizeSelection(out start, out end);
+				string first = LinkAtPosition(start);
+				if (!string.IsNullOrEmpty(first)) return first;
+				return LinkAtPosition(new CaretPos(start.P, Math.Max(0, start.Offset + 1)));
+			}
+		}
+
+		public bool ApplyHyperlink(string url)
+		{
+			string target = (url ?? string.Empty).Trim();
+			if (target.Length == 0) return false;
+			if (IsEditingTableCell && _cellEdit != null && _cellEdit.Cell != null)
+			{
+				PushUndo();
+				_cellEdit.Cell.LinkUrl = target;
+				InvalidateLayout(true);
+				OnTextChanged();
+				return true;
+			}
+			if (_tableSelectionParagraph >= 0 && _tableSelectionParagraph < _document.Paragraphs.Count)
+			{
+				Paragraph table = _document.Paragraphs[_tableSelectionParagraph];
+				table.EnsureTableCells();
+				if (table.TableCells != null)
+				{
+					PushUndo();
+					int firstRow = Math.Max(0, Math.Min(_tableSelectionStartRow, _tableSelectionEndRow));
+					int lastRow = Math.Min(table.TableCells.Length - 1,
+						Math.Max(_tableSelectionStartRow, _tableSelectionEndRow));
+					int firstColumn = Math.Max(0, Math.Min(_tableSelectionStartColumn, _tableSelectionEndColumn));
+					int lastColumn = Math.Max(_tableSelectionStartColumn, _tableSelectionEndColumn);
+					for (int r = firstRow; r <= lastRow; r++)
+					{
+						if (table.TableCells[r] == null) continue;
+						for (int c = firstColumn; c <= lastColumn && c < table.TableCells[r].Length; c++)
+							if (table.TableCells[r][c] != null) table.TableCells[r][c].LinkUrl = target;
+					}
+					InvalidateLayout(true);
+					OnTextChanged();
+					return true;
+				}
+			}
+			if (HasSelection)
+			{
+				return ApplySelectionRunChange(delegate(RunFormat format)
+				{
+					format.LinkUrl = target;
+				});
+			}
+			RunFormat linkFormat = _typingFormat.Clone();
+			linkFormat.LinkUrl = target;
+			InsertFormattedRuns(new List<FormattedRun>
+			{
+				new FormattedRun(target, linkFormat)
+			});
+			return true;
 		}
 
 		public void SetForeColor(Color color)

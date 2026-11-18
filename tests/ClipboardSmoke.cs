@@ -76,6 +76,8 @@ internal static class P
             throw new Exception("mojibake clipboard: " + fixedText);
 
         Clipboard.SetText("SIN FORMATO");
+        Application.DoEvents();
+        System.Threading.Thread.Sleep(100);
         Paragraph plainOnlyParagraph = new Paragraph();
         target.Paragraphs.Add(plainOnlyParagraph);
         editor.SetFontFamily("Arial");
