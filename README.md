@@ -2,26 +2,26 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **422 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **426 KB** y solo depende de .NET Framework 4.0 o posterior.
 
-Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
+Versión: **0.0.2 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
 ## Ejecutable incluido en el repositorio
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 422 KB
-- SHA-256: 3BCED8CE3E4E23942D953CA39DA23ABEC8E5AC8C8D22A0EC24BBD14311A0BF7A
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 426 KB
+- SHA-256: 6540AAB5E540EBBC407FC42DCA4CE0A141AFA5FDAFD8FF7F1AB3AD7FE48F63A5
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
 ## Probar y reportar errores
 
-La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.1-beta).
+La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.2-beta).
 
-- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord.exe)
-- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord-Beta.zip)
-- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord-Installer.zip)
+- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.2-beta/MiniWord.exe)
+- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.2-beta/MiniWord-Beta.zip)
+- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.2-beta/MiniWord-Installer.zip)
 
 Para reportar un fallo usa el [formulario de error](https://github.com/JDSEIKA/mini-word/issues/new?template=bug_report.yml). Incluye un DOCX mínimo sin datos privados, la versión de Windows y los pasos exactos. Más detalles en [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -74,6 +74,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - **Compatibilidad de objetos**: formas y cuadros de texto se exportan como VML para Word 2007/2010+ y LibreOffice; las imágenes flotantes usan anclas relativas a página. Esto evita que cambien de página al abrirlas.
 - **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con `Ctrl+Click` se muestra el destino y se pide autorización antes de abrirlo. El botón **Hipervínculo** permite crear o editar enlaces; también se admiten enlaces por celda completa en tablas.
 - **Orden Z y rotación**: **Traer al frente**, **Enviar al fondo** y **Rotar 90°** para formas, imágenes y cuadros de texto.
+- **Apertura segura**: rechazo de ZIP anidados malformados, bombas de descompresión, rutas `../`, entradas duplicadas, DTD/entidades XML, RTF excesivamente anidado y BOM inválidos. Macros VBA, ActiveX y scripts ODT se avisan y no se ejecutan.
 - **Enlaces en tablas**: enlace por celda completa, con color azul, subrayado, clic y conservación en DOCX.
 - **Pegar sin formato**: `Ctrl+Shift+V` o el botón de la cinta inserta solo el texto, con el formato base del documento.
 - **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
@@ -83,6 +84,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Lector MS-DOC con tabla de piezas, estilos, CHPX/PAPX, secciones, listas, tablas y campos.
 - Informe de compatibilidad y brechas: [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
 - Registro de fallos y auditorías por fecha: [`docs/FALLOS_2026-11-17.md`](docs/FALLOS_2026-11-17.md).
+- Auditoría de seguridad y recuento consolidado: [`docs/FALLOS_2026-11-18.md`](docs/FALLOS_2026-11-18.md).
 
 ## Compilar
 

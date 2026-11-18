@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: "Descargar la última beta"
-    url: "https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.1-beta"
+    url: "https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.2-beta"
     about: "Ejecutable, paquete beta e instalador portátil."
   - name: "Preguntas y comentarios generales"
     url: "https://github.com/JDSEIKA/mini-word/discussions"

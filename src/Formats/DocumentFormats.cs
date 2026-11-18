@@ -112,9 +112,16 @@ namespace WordPadClone.Formats
 
         public static string ReadRtfText(string path)
         {
+            FileInfo info = new FileInfo(path);
+            if (info.Length > 64L * 1024 * 1024)
+                throw new InvalidDataException("El RTF supera el límite de 64 MB.");
             byte[] bytes = File.ReadAllBytes(path);
             if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
                 return RtfSanitizer.Normalize(new UTF8Encoding(false).GetString(bytes, 3, bytes.Length - 3));
+            if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+                return RtfSanitizer.Normalize(Encoding.Unicode.GetString(bytes, 2, bytes.Length - 2));
+            if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+                return RtfSanitizer.Normalize(Encoding.BigEndianUnicode.GetString(bytes, 2, bytes.Length - 2));
             Encoding enc = Encoding.GetEncoding(1252);
             return RtfSanitizer.Normalize(enc.GetString(bytes));
         }
@@ -210,6 +217,8 @@ namespace WordPadClone.Formats
             for (int i = 0; i < source.Comments.Count; i++) copy.Comments.Add(source.Comments[i].Clone());
             for (int i = 0; i < source.UnsupportedFeatures.Count; i++)
                 copy.UnsupportedFeatures.Add(source.UnsupportedFeatures[i]);
+            for (int i = 0; i < source.SecurityWarnings.Count; i++)
+                copy.SecurityWarnings.Add(source.SecurityWarnings[i]);
             if (source.PreservedParts != null)
             {
                 foreach (KeyValuePair<string, byte[]> part in source.PreservedParts)

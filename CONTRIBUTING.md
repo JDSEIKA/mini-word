@@ -1,12 +1,12 @@
-# Probar Mini Word 0.0.1 Beta
+# Probar Mini Word 0.0.2 Beta
 
 Gracias por dedicar tiempo a probar una versión beta.
 
 ## Descarga
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord.exe)
-- [MiniWord-Beta.zip](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord-Beta.zip)
-- [MiniWord-Installer.zip](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.1-beta/MiniWord-Installer.zip)
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.2-beta/MiniWord.exe)
+- [MiniWord-Beta.zip](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.2-beta/MiniWord-Beta.zip)
+- [MiniWord-Installer.zip](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.2-beta/MiniWord-Installer.zip)
 
 No hace falta instalar Office ni LibreOffice. Se requiere Windows 7 SP1 o posterior y .NET Framework 4.0 o posterior.
 

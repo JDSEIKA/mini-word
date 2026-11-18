@@ -57,7 +57,7 @@ namespace WordPadClone
 
         public NativeEditorForm(string[] args)
         {
-            Text = "Mini Word 0.0.1 Beta";
+            Text = "Mini Word 0.0.2 Beta";
             AccessibleName = "Mini Word";
             AccessibleDescription = "Procesador de textos Mini Word";
             Font = new Font(FontResolver.Resolve("Segoe UI", "Español"), 9f);
@@ -628,7 +628,7 @@ namespace WordPadClone
         private void ShowAbout()
         {
             MessageBox.Show(this,
-                "Mini Word 0.0.1 Beta\nEditor nativo de documentos DOCX.\n"
+                "Mini Word 0.0.2 Beta\nEditor nativo de documentos DOCX.\n"
                 + "Motor tipográfico y de paginación propio.\n"
                 + "Secciones, columnas, objetos flotantes, notas, comentarios y estilos de tabla.",
                 "Acerca de Mini Word", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1061,7 +1061,7 @@ namespace WordPadClone
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(_path) ? "Sin título" : Path.GetFileName(_path);
-            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.1 Beta" : name + " - Mini Word 0.0.1 Beta") + (_dirty ? " *" : "");
+            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.2 Beta" : name + " - Mini Word 0.0.2 Beta") + (_dirty ? " *" : "");
         }
 
         private void NewDocument()
@@ -1119,6 +1119,14 @@ namespace WordPadClone
                 UpdateStatus();
                 if (importedDoc)
                     _stateLabel.Text = "DOC 97-2003 importado; al guardar se creará un DOCX";
+                if (model.SecurityWarnings.Count > 0)
+                {
+                    MessageBox.Show(this,
+                        "Advertencia de seguridad:\n\n• "
+                        + string.Join("\n• ", model.SecurityWarnings.ToArray())
+                        + "\n\nMini Word no ejecuta macros, scripts ni controles ActiveX.",
+                        "Contenido potencialmente activo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
 
 
             }

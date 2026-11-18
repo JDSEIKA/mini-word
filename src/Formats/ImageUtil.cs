@@ -13,6 +13,7 @@ namespace WordPadClone.Formats
         {
             if (data == null || data.Length == 0) throw new InvalidDataException("Imagen vacía.");
             if (data.Length > 32 * 1024 * 1024) throw new InvalidDataException("La imagen supera el límite de 32 MB.");
+            CheckEncodedDimensions(data, extension);
             if (string.Equals(extension, "wmf", StringComparison.OrdinalIgnoreCase) && !HasPlaceableHeader(data))
             {
                 int w = Math.Max(1, widthTwips / 15);
@@ -96,6 +97,66 @@ namespace WordPadClone.Formats
             }
             if (ext == "jpg") ext = "jpeg";
             return new ImageInline(inline.Data, ext, inline.WidthTwips, inline.HeightTwips, inline.Format);
+        }
+
+        private static void CheckEncodedDimensions(byte[] data, string extension)
+        {
+            int width = 0;
+            int height = 0;
+            string ext = (extension ?? string.Empty).ToLowerInvariant();
+            if (data.Length >= 24 && data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47)
+            {
+                width = ReadBigEndianInt(data, 16);
+                height = ReadBigEndianInt(data, 20);
+            }
+            else if (data.Length >= 10 && data[0] == 'G' && data[1] == 'I' && data[2] == 'F')
+            {
+                width = data[6] | (data[7] << 8);
+                height = data[8] | (data[9] << 8);
+            }
+            else if (data.Length >= 26 && data[0] == 'B' && data[1] == 'M')
+            {
+                width = Math.Abs(BitConverter.ToInt32(data, 18));
+                height = Math.Abs(BitConverter.ToInt32(data, 22));
+            }
+            else if (data.Length >= 4 && data[0] == 0xFF && data[1] == 0xD8)
+            {
+                int pos = 2;
+                while (pos + 9 < data.Length)
+                {
+                    if (data[pos] != 0xFF) { pos++; continue; }
+                    while (pos < data.Length && data[pos] == 0xFF) pos++;
+                    if (pos >= data.Length) break;
+                    int marker = data[pos++];
+                    if (marker == 0xD8 || marker == 0xD9 || marker == 0x01 || marker == 0xDA) continue;
+                    if (pos + 2 > data.Length) break;
+                    int length = (data[pos] << 8) | data[pos + 1];
+                    if (length < 2 || pos + length > data.Length) break;
+                    if ((marker >= 0xC0 && marker <= 0xC3)
+                        || (marker >= 0xC5 && marker <= 0xC7)
+                        || (marker >= 0xC9 && marker <= 0xCB)
+                        || (marker >= 0xCD && marker <= 0xCF))
+                    {
+                        if (pos + 7 < data.Length)
+                        {
+                            height = (data[pos + 3] << 8) | data[pos + 4];
+                            width = (data[pos + 5] << 8) | data[pos + 6];
+                        }
+                        break;
+                    }
+                    pos += length;
+                }
+            }
+            if (width > 0 && height > 0 && (long)width * height > 50000000L)
+                throw new InvalidDataException("La imagen codificada supera el límite de 50 megapíxeles.");
+            if (width > 20000 || height > 20000)
+                throw new InvalidDataException("La imagen tiene dimensiones demasiado grandes.");
+        }
+
+        private static int ReadBigEndianInt(byte[] data, int offset)
+        {
+            return (data[offset] << 24) | (data[offset + 1] << 16)
+                | (data[offset + 2] << 8) | data[offset + 3];
         }
 
         private static bool HasPlaceableHeader(byte[] data)

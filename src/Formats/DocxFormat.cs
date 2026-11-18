@@ -2210,9 +2210,36 @@ namespace WordPadClone.Formats
             Reader reader = new Reader(zip, rels, styles, numbering);
             DocumentModel model = reader.ReadDocument(document);
             DetectUnsupported(document, model);
+            DetectSecurityRisks(zip, model);
             ReadCoreProperties(zip, model);
             PreserveUnknownParts(zip, model);
             return model;
+        }
+
+        private static void DetectSecurityRisks(Dictionary<string, byte[]> zip, DocumentModel model)
+        {
+            if (zip == null || model == null) return;
+            bool vba = false;
+            bool activeX = false;
+            bool embedded = false;
+            foreach (string key in zip.Keys)
+            {
+                string path = key.Replace('\\', '/');
+                if (path.StartsWith("word/vbaProject.bin", StringComparison.OrdinalIgnoreCase)
+                    || path.StartsWith("word/vbaData.xml", StringComparison.OrdinalIgnoreCase)
+                    || path.StartsWith("word/vbaProjectSignature.bin", StringComparison.OrdinalIgnoreCase))
+                    vba = true;
+                if (path.StartsWith("word/activeX/", StringComparison.OrdinalIgnoreCase))
+                    activeX = true;
+                if (path.StartsWith("word/embeddings/", StringComparison.OrdinalIgnoreCase))
+                    embedded = true;
+            }
+            if (vba)
+                model.SecurityWarnings.Add("El documento contiene macros VBA. No se ejecutan y no se conservan al guardar.");
+            if (activeX)
+                model.SecurityWarnings.Add("El documento contiene controles ActiveX. Se descartan y no se ejecutan.");
+            if (embedded)
+                model.SecurityWarnings.Add("El documento contiene objetos OLE incrustados. Se conservan sin ejecutarse.");
         }
 
         private static void PreserveUnknownParts(Dictionary<string, byte[]> zip, DocumentModel model)
@@ -2227,7 +2254,6 @@ namespace WordPadClone.Formats
                     || path.StartsWith("word/glossary/", StringComparison.OrdinalIgnoreCase)
                     || path.StartsWith("word/charts/", StringComparison.OrdinalIgnoreCase)
                     || path.StartsWith("word/diagrams/", StringComparison.OrdinalIgnoreCase)
-                    || path.StartsWith("word/activeX/", StringComparison.OrdinalIgnoreCase)
                     || path.StartsWith("customXml/", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(path, "word/fontTable.xml", StringComparison.OrdinalIgnoreCase);
                 if (!keep) continue;

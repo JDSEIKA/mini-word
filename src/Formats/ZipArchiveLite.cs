@@ -193,7 +193,7 @@ namespace WordPadClone.Formats
             if (count == 0xFFFF || centralOffset == 0xFFFFFFFFu)
                 throw new InvalidDataException("Los archivos ZIP64 no son compatibles.");
 
-            if (centralOffset > all.Length || centralOffset + centralSize > all.Length)
+            if ((long)centralOffset > all.Length || (long)centralOffset + centralSize > all.Length)
                 throw new InvalidDataException("El directorio central del ZIP está dañado.");
 
             Dictionary<string, byte[]> result = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
@@ -206,6 +206,8 @@ namespace WordPadClone.Formats
                     throw new InvalidDataException("Entrada ZIP dañada.");
 
                 ushort flags = BitConverter.ToUInt16(all, pos + 8);
+                if ((flags & 0x0001) != 0)
+                    throw new InvalidDataException("El ZIP está cifrado y no se admite.");
                 ushort method = BitConverter.ToUInt16(all, pos + 10);
                 uint crc = BitConverter.ToUInt32(all, pos + 16);
                 uint compSize = BitConverter.ToUInt32(all, pos + 20);
@@ -224,24 +226,30 @@ namespace WordPadClone.Formats
                 if (nameLen == 0 || nameLen > MaxNameBytes || name.IndexOf('\0') >= 0
                     || name.StartsWith("/", StringComparison.Ordinal)
                     || name.IndexOf("../", StringComparison.Ordinal) >= 0
-                    || name.IndexOf("..\\", StringComparison.Ordinal) >= 0)
+                    || name.IndexOf("..\\", StringComparison.Ordinal) >= 0
+                    || name.IndexOf(':') >= 0 || HasControlCharacter(name))
                     throw new InvalidDataException("Nombre de entrada ZIP no seguro.");
                 pos += 46 + nameLen + extraLen + commentLen;
 
-                if (uncompSize > 128 * 1024 * 1024)
+                if (uncompSize > 64 * 1024 * 1024)
                     throw new InvalidDataException("Una entrada del ZIP supera el límite de 128 MB.");
                 total += uncompSize;
-                if (total > 256 * 1024 * 1024)
+                if (total > 128 * 1024 * 1024)
                     throw new InvalidDataException("El contenido del ZIP supera el límite de 256 MB.");
 
-                if (localOffset + 30 > all.Length || BitConverter.ToUInt32(all, (int)localOffset) != LocalSig)
+                if ((long)localOffset + 30 > all.Length || BitConverter.ToUInt32(all, (int)localOffset) != LocalSig)
                     throw new InvalidDataException("Cabecera local ZIP dañada.");
 
                 int lnameLen = BitConverter.ToUInt16(all, (int)localOffset + 26);
                 int lextraLen = BitConverter.ToUInt16(all, (int)localOffset + 28);
                 long dataStart = (long)localOffset + 30 + lnameLen + lextraLen;
-                if (dataStart + compSize > all.Length)
+                if (dataStart + (long)compSize > all.Length)
                     throw new InvalidDataException("Datos ZIP truncados.");
+                string localName = Encoding.UTF8.GetString(all, (int)localOffset + 30, lnameLen);
+                localName = localName.Replace('\\', '/');
+                while (localName.StartsWith("./", StringComparison.Ordinal)) localName = localName.Substring(2);
+                if (!string.Equals(localName, name, StringComparison.Ordinal))
+                    throw new InvalidDataException("Los nombres de la cabecera local y central no coinciden.");
 
                 byte[] data;
                 if (method == 0)
@@ -260,7 +268,7 @@ namespace WordPadClone.Formats
                         while ((n = ds.Read(buffer, 0, buffer.Length)) > 0)
                         {
                             output.Write(buffer, 0, n);
-                            if (output.Length > 128 * 1024 * 1024)
+                            if (output.Length > 64 * 1024 * 1024)
                                 throw new InvalidDataException("Una entrada descomprimida es demasiado grande.");
                         }
                         data = output.ToArray();
@@ -275,10 +283,19 @@ namespace WordPadClone.Formats
                     throw new InvalidDataException("El tamaño descomprimido no coincide en '" + name + "'.");
                 if (Crc32(data) != crc)
                     throw new InvalidDataException("La suma de comprobación CRC no coincide en '" + name + "'.");
-                if (!result.ContainsKey(name)) result.Add(name, data);
+                if (result.ContainsKey(name))
+                    throw new InvalidDataException("El ZIP contiene una entrada duplicada: '" + name + "'.");
+                result.Add(name, data);
             }
 
             return result;
+        }
+
+        private static bool HasControlCharacter(string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+                if (value[i] < 0x20 || value[i] == 0x7F) return true;
+            return false;
         }
 
         private static int FindEnd(byte[] data)

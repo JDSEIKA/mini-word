@@ -49,6 +49,9 @@ namespace WordPadClone.Formats
 
         public static CompoundFile Open(string path)
         {
+            FileInfo info = new FileInfo(path);
+            if (info.Length > 64L * 1024 * 1024)
+                throw new InvalidDataException("El documento OLE2 supera el límite de 64 MB.");
             byte[] data = File.ReadAllBytes(path);
             if (data.Length < 512) throw new InvalidDataException("El archivo es demasiado pequeño para ser un documento de Word 97-2003.");
             if (!(data[0] == 0xD0 && data[1] == 0xCF && data[2] == 0x11 && data[3] == 0xE0

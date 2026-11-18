@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -17,6 +18,8 @@ namespace WordPadClone.Formats
         public static DocumentModel Read(string rtf)
         {
             if (string.IsNullOrEmpty(rtf)) return new DocumentModel();
+            if (rtf.Length > 64 * 1024 * 1024)
+                throw new InvalidDataException("El RTF supera el límite de 64 MB.");
             return new Parser(rtf).Parse();
         }
 
@@ -115,7 +118,23 @@ namespace WordPadClone.Formats
                 return _doc;
             }
 
+            private int _parseDepth;
+
             private void ParseGroup()
+            {
+                if (++_parseDepth > 256)
+                    throw new InvalidDataException("El RTF está demasiado anidado.");
+                try
+                {
+                    ParseGroupCore();
+                }
+                finally
+                {
+                    _parseDepth--;
+                }
+            }
+
+            private void ParseGroupCore()
             {
                 if (_i >= _len || _s[_i] != '{') return;
                 _i++;

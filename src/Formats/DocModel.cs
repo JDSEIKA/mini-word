@@ -40,6 +40,7 @@ namespace WordPadClone.Formats
         public readonly List<DocumentNote> Endnotes = new List<DocumentNote>();
         public readonly List<DocumentComment> Comments = new List<DocumentComment>();
         public readonly List<string> UnsupportedFeatures = new List<string>();
+        public readonly List<string> SecurityWarnings = new List<string>();
 
         public int PageWidthTwips = 12240;   // 8.5 in
         public int PageHeightTwips = 15840;  // 11 in

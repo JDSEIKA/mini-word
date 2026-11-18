@@ -662,13 +662,36 @@ namespace WordPadClone.Formats
             OdtReader reader = new OdtReader(zip);
             if (stylesDoc != null) reader.ParseStyleDocument(stylesDoc);
             reader.ParseStyleDocument(contentDoc);
-            return reader.ReadContent(contentDoc);
+            DocumentModel model = reader.ReadContent(contentDoc);
+            bool basic = false;
+            bool scripts = false;
+            foreach (string key in zip.Keys)
+            {
+                if (key.StartsWith("Basic/", StringComparison.OrdinalIgnoreCase))
+                    basic = true;
+                if (key.StartsWith("Scripts/", StringComparison.OrdinalIgnoreCase))
+                    scripts = true;
+            }
+            if (basic || scripts)
+                model.SecurityWarnings.Add("El ODT contiene macros o scripts. No se ejecutan y no se conservan al guardar.");
+            return model;
         }
 
         private static XDocument LoadXml(byte[] data)
         {
-            using (MemoryStream ms = new MemoryStream(data))
-                return XDocument.Load(ms);
+            if (data == null || data.Length > 64 * 1024 * 1024)
+                throw new InvalidDataException("XML del ODT demasiado grande.");
+            XmlReaderSettings settings = new XmlReaderSettings();
+            settings.DtdProcessing = DtdProcessing.Prohibit;
+            settings.XmlResolver = null;
+            settings.MaxCharactersInDocument = 64 * 1024 * 1024;
+            settings.MaxCharactersFromEntities = 0;
+            using (MemoryStream ms = new MemoryStream(data, false))
+            using (XmlReader reader = XmlReader.Create(ms, settings))
+            {
+                XDocument doc = XDocument.Load(reader);
+                return doc;
+            }
         }
 
         private sealed class OdtStyle

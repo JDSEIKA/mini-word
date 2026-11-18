@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 
@@ -17,6 +17,9 @@ namespace WordPadClone.Formats
     {
         public static string Load(string path)
         {
+            FileInfo info = new FileInfo(path);
+            if (info.Length > 64L * 1024 * 1024)
+                throw new InvalidDataException("El archivo de texto supera el límite de 64 MB.");
             byte[] bytes = File.ReadAllBytes(path);
             string text;
 
