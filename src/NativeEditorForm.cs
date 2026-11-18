@@ -294,34 +294,50 @@ namespace WordPadClone
         private void PopulateRecentGroup(RibbonGroup group)
         {
             group.Strip.Items.Clear();
+            ToolStripDropDownButton recent = new ToolStripDropDownButton("Abrir reciente");
+            recent.Image = RibbonIcons.Get("open");
+            recent.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            recent.TextImageRelation = TextImageRelation.ImageAboveText;
+            recent.TextAlign = ContentAlignment.BottomCenter;
+            recent.AutoSize = true;
+            recent.Padding = new Padding(4, 1, 4, 1);
+            recent.Font = new Font("Segoe UI", 8.5f);
+            recent.ToolTipText = "Últimos 5 documentos";
             if (_recentFiles.Count == 0)
             {
-                ToolStripLabel empty = new ToolStripLabel("Sin documentos recientes");
+                ToolStripMenuItem empty = new ToolStripMenuItem("Sin documentos recientes");
                 empty.Enabled = false;
-                group.Strip.Items.Add(empty);
+                recent.DropDownItems.Add(empty);
+            }
+            else
+            {
+                for (int i = 0; i < _recentFiles.Count && i < 5; i++)
+                {
+                    string path = _recentFiles[i];
+                    string recentPath = path;
+                    string name = Path.GetFileName(path);
+                    if (string.IsNullOrEmpty(name)) name = path;
+                    if (name.Length > 48) name = name.Substring(0, 45) + "...";
+                    name = name.Replace("&", "&&");
+                    ToolStripMenuItem item = new ToolStripMenuItem(name);
+                    item.ToolTipText = path;
+                    item.Click += delegate { OpenRecentFile(recentPath); };
+                    recent.DropDownItems.Add(item);
+                }
+            }
+            group.Strip.Items.Add(recent);
+        }
+
+        private void OpenRecentFile(string path)
+        {
+            if (File.Exists(path))
+            {
+                OpenFile(path);
                 return;
             }
-            for (int i = 0; i < _recentFiles.Count && i < 5; i++)
-            {
-                string path = _recentFiles[i];
-                string recentPath = path;
-                string name = Path.GetFileName(path);
-                if (string.IsNullOrEmpty(name)) name = path;
-                if (name.Length > 22) name = name.Substring(0, 19) + "...";
-                name = name.Replace("&", "&&");
-                ToolStripButton button = LargeButton(name, "open", delegate
-                {
-                    if (File.Exists(recentPath)) OpenFile(recentPath);
-                    else
-                    {
-                        RemoveRecentFile(recentPath);
-                        MessageBox.Show(this, "El documento reciente ya no existe.",
-                            "Documentos recientes", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                });
-                button.ToolTipText = path;
-                group.Strip.Items.Add(button);
-            }
+            RemoveRecentFile(path);
+            MessageBox.Show(this, "El documento reciente ya no existe.",
+                "Documentos recientes", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void RefreshRecentGroup()
