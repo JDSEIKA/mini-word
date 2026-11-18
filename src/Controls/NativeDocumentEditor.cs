@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -3269,6 +3270,52 @@ namespace WordPadClone.Controls
 			return base.IsInputKey(keyData);
 		}
 
+		private string LinkAtClient(Point client)
+		{
+			EnsureLayout();
+			for (int i = 0; i < _lines.Count; i++)
+			{
+				LayoutLine line = _lines[i];
+				for (int j = 0; j < line.Segments.Count; j++)
+				{
+					LayoutSegment segment = line.Segments[j];
+					if (string.IsNullOrEmpty(segment.Format.LinkUrl)) continue;
+					RectangleF rect = new RectangleF(segment.X, segment.Y, segment.Width, segment.Height);
+					if (rect.Contains(client.X, client.Y)) return segment.Format.LinkUrl;
+				}
+			}
+			return null;
+		}
+
+		private void OpenLinkWithConfirmation(string url)
+		{
+			string target = (url ?? string.Empty).Trim();
+			Uri uri;
+			if (!Uri.TryCreate(target, UriKind.Absolute, out uri)
+				|| (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps
+					&& uri.Scheme != Uri.UriSchemeMailto))
+			{
+				MessageBox.Show(FindForm(),
+					"El enlace no tiene un destino http, https o mailto válido:\n\n" + target,
+					"Abrir hipervínculo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+			DialogResult result = MessageBox.Show(FindForm(),
+				"Destino del enlace:\n\n" + uri.AbsoluteUri
+				+ "\n\n¿Autorizas que se abra con el programa predeterminado?",
+				"Abrir hipervínculo", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+			if (result != DialogResult.Yes) return;
+			try
+			{
+				Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show(FindForm(), "No se pudo abrir el enlace.\n\n" + ex.Message,
+					"Abrir hipervínculo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
@@ -3277,6 +3324,15 @@ namespace WordPadClone.Controls
 				return;
 			}
 			Focus();
+			if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
+			{
+				string link = LinkAtClient(e.Location);
+				if (!string.IsNullOrEmpty(link))
+				{
+					OpenLinkWithConfirmation(link);
+					return;
+				}
+			}
 			int num = FloatingHandleAt(e.Location);
 			if (num >= 0)
 			{
@@ -3410,6 +3466,11 @@ namespace WordPadClone.Controls
 					base.AutoScrollPosition = new Point(-base.AutoScrollPosition.X, -base.AutoScrollPosition.Y + 24);
 				}
 				SetCaret(PointToPosition(e.Location), true);
+			}
+			if (e.Button == MouseButtons.None && !_movingFloating && !_resizingFloating
+				&& !_resizingImage && !_selecting && !_tableDragging)
+			{
+				Cursor = string.IsNullOrEmpty(LinkAtClient(e.Location)) ? Cursors.IBeam : Cursors.Hand;
 			}
 		}
 
@@ -4259,7 +4320,8 @@ namespace WordPadClone.Controls
 			case Keys.V:
 				if (control)
 				{
-					Paste();
+					if (shift) PastePlainText();
+					else Paste();
 					e.Handled = true;
 				}
 				break;
@@ -5228,14 +5290,17 @@ namespace WordPadClone.Controls
 				}
 				int index = Math.Max(0, Math.Min(_caret.P, _document.Paragraphs.Count - 1));
 				Paragraph paragraph = _document.Paragraphs[index];
+				EnsureLayout();
+				int page = Math.Max(0, Math.Min(_pages.Count - 1, PageForPosition(_caret)));
+				Point offset = InsertionOffsetFor(page, index);
 				ImageInline image = new ImageInline(data, extension, num3, heightTwips, _typingFormat.Clone());
 				FloatingObject floatingObject = new FloatingObject();
 				floatingObject.Kind = FloatingKind.Image;
 				floatingObject.Image = image;
 				floatingObject.WidthTwips = num3;
 				floatingObject.HeightTwips = heightTwips;
-				floatingObject.OffsetXTwips = 0;
-				floatingObject.OffsetYTwips = 0;
+				floatingObject.OffsetXTwips = offset.X;
+				floatingObject.OffsetYTwips = offset.Y;
 				floatingObject.Wrap = TextWrapMode.Square;
 				floatingObject.BehindText = false;
 				paragraph.FloatingObjects.Add(floatingObject);
@@ -5496,16 +5561,45 @@ namespace WordPadClone.Controls
 			return Math.Max(0, Math.Min(_caret.P, _document.Paragraphs.Count - 1));
 		}
 
+		private int ParagraphForFloatingInsertion(int page)
+		{
+			EnsureLayout();
+			// If the caret is on the page being viewed, insert at the caret.
+			// Only fall back to the page center when the user has scrolled to a
+			// different page without moving the caret.
+			if (PageForPosition(_caret) == page)
+				return Math.Max(0, Math.Min(_caret.P, _document.Paragraphs.Count - 1));
+			return ParagraphOnViewedPage();
+		}
+
 		private Point InsertionOffsetFor(int page)
+		{
+			return InsertionOffsetFor(page, Math.Max(0, Math.Min(_caret.P, _document.Paragraphs.Count - 1)));
+		}
+
+		private Point InsertionOffsetFor(int page, int paragraphIndex)
 		{
 			int count = 0;
 			for (int i = 0; i < _document.Paragraphs.Count; i++)
 				for (int j = 0; j < _document.Paragraphs[i].FloatingObjects.Count; j++)
 					count++;
-			DocumentSection section = _document.SectionForParagraph(
-				Math.Max(0, Math.Min(_caret.P, _document.Paragraphs.Count - 1)));
-			return new Point(section.MarginLeftTwips + 720 + (count % 4) * 360,
-				section.MarginTopTwips + 720 + ((count / 4) % 4) * 360);
+			DocumentSection section = _document.SectionForParagraph(paragraphIndex);
+			int x = section.MarginLeftTwips + 720 + (count % 4) * 360;
+			int y = section.MarginTopTwips + 720 + ((count / 4) % 4) * 360;
+			EnsureLayout();
+			if (page >= 0 && page < _pages.Count)
+			{
+				LayoutPage layoutPage = _pages[page];
+				for (int i = 0; i < _lines.Count; i++)
+				{
+					LayoutLine line = _lines[i];
+					if (line.Page != page || line.Paragraph != paragraphIndex) continue;
+					float localY = (line.Y - layoutPage.Top) / Math.Max(0.1f, _zoom) * 15f;
+					y = (int)Math.Max(section.MarginTopTwips, localY);
+					break;
+				}
+			}
+			return new Point(x, y);
 		}
 
 		public void InsertTextBox()
@@ -5514,7 +5608,9 @@ namespace WordPadClone.Controls
 			{
 				_lastTextBoxInsertUtc = DateTime.UtcNow;
 				PushUndo();
-				int index = ParagraphOnViewedPage();
+				EnsureLayout();
+				int page = Math.Max(0, Math.Min(_pages.Count - 1, ViewedPage));
+				int index = ParagraphForFloatingInsertion(page);
 				Paragraph paragraph = _document.Paragraphs[index];
 				FloatingObject floatingObject = new FloatingObject();
 				floatingObject.Kind = FloatingKind.TextBox;
@@ -5522,7 +5618,7 @@ namespace WordPadClone.Controls
 				floatingObject.Text = "Cuadro de texto";
 				floatingObject.WidthTwips = 2880;
 				floatingObject.HeightTwips = 1080;
-				Point offset = InsertionOffsetFor(ViewedPage);
+				Point offset = InsertionOffsetFor(page, index);
 				floatingObject.OffsetXTwips = offset.X;
 				floatingObject.OffsetYTwips = offset.Y;
 				floatingObject.Wrap = TextWrapMode.Square;
@@ -5607,7 +5703,7 @@ namespace WordPadClone.Controls
 				PushUndo();
 				EnsureLayout();
 				int page = Math.Max(0, Math.Min(_pages.Count - 1, ViewedPage));
-				int index = ParagraphOnViewedPage();
+				int index = ParagraphForFloatingInsertion(page);
 				Paragraph paragraph = _document.Paragraphs[index];
 				FloatingObject floatingObject = new FloatingObject();
 				floatingObject.Kind = FloatingKind.Shape;
@@ -5620,7 +5716,7 @@ namespace WordPadClone.Controls
 					floatingObject.WidthTwips = 2000;
 					floatingObject.HeightTwips = 1600;
 				}
-				Point offset = InsertionOffsetFor(page);
+				Point offset = InsertionOffsetFor(page, index);
 				floatingObject.OffsetXTwips = offset.X;
 				floatingObject.OffsetYTwips = offset.Y;
 				floatingObject.Fill = Color.FromArgb(221, 235, 247);
@@ -6201,6 +6297,28 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		public void PastePlainText()
+		{
+			if (IsEditingTableCell)
+			{
+				_cellEditor.Paste();
+				return;
+			}
+			try
+			{
+				if (!Clipboard.ContainsText()) return;
+				string text = RepairMojibake(Clipboard.GetText());
+				InsertFormattedRuns(new List<FormattedRun>
+				{
+					new FormattedRun(text, new RunFormat("Calibri", 22))
+				});
+				_clipboardIsShape = false;
+			}
+			catch
+			{
+			}
+		}
+
 		public void Paste()
 		{
 			if (IsEditingTableCell)
@@ -6212,9 +6330,10 @@ namespace WordPadClone.Controls
 			{
 				PushUndo();
 				EnsureLayout();
-				int index = ParagraphOnViewedPage();
+				int page = Math.Max(0, Math.Min(_pages.Count - 1, ViewedPage));
+				int index = ParagraphForFloatingInsertion(page);
 				FloatingObject copy = _clipboardFloating.Clone();
-				Point offset = InsertionOffsetFor(ViewedPage);
+				Point offset = InsertionOffsetFor(page, index);
 				copy.OffsetXTwips = offset.X;
 				copy.OffsetYTwips = offset.Y;
 				_document.Paragraphs[index].FloatingObjects.Add(copy);

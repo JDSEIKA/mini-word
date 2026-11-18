@@ -75,6 +75,17 @@ internal static class P
             || !fixedText.Contains("están") || !fixedText.Contains("edición"))
             throw new Exception("mojibake clipboard: " + fixedText);
 
+        Clipboard.SetText("SIN FORMATO");
+        Paragraph plainOnlyParagraph = new Paragraph();
+        target.Paragraphs.Add(plainOnlyParagraph);
+        editor.SetFontFamily("Arial");
+        editor.SetFontSize(30);
+        editor.PlaceCaret(4, 0);
+        editor.PastePlainText();
+        if (!HasRun(plainOnlyParagraph, "SIN FORMATO", 22, false, false)
+            || ((TextInline)plainOnlyParagraph.Inlines[0]).Format.FontFamily != "Calibri")
+            throw new Exception("paste without formatting");
+
         form.Close();
         Console.WriteLine("CLIPBOARD_SMOKE=PASS");
     }

@@ -500,7 +500,6 @@ namespace WordPadClone.Formats
                     w.WriteAttributeString("xmlns", "wp", null, WP.NamespaceName);
                     w.WriteAttributeString("xmlns", "a", null, A.NamespaceName);
                     w.WriteAttributeString("xmlns", "pic", null, "http://schemas.openxmlformats.org/drawingml/2006/picture");
-                    w.WriteAttributeString("xmlns", "wps", null, WPS.NamespaceName);
                     w.WriteAttributeString("xmlns", "v", null, VML.NamespaceName);
                     w.WriteAttributeString("xmlns", "o", null, OLE.NamespaceName);
                     w.WriteStartElement("w", "body", W.NamespaceName);
@@ -1142,7 +1141,11 @@ namespace WordPadClone.Formats
                 if (floating.Image != null && floating.Kind == FloatingKind.Image)
                     WriteFloatingImageRun(w, floating, images, ref imageCounter);
                 else if (floating.Kind == FloatingKind.TextBox || floating.Kind == FloatingKind.Shape)
-                    WriteFloatingDrawingRun(w, floating, ref imageCounter);
+                    // VML is understood by Word 2007, Word 2010+ and
+                    // LibreOffice; the wps DrawingML vocabulary used before
+                    // is a Word 2010 extension and can make Word 2007 report
+                    // an unreadable document.
+                    WriteFloatingVmlRun(w, floating);
                 else if (floating.Kind == FloatingKind.Embedded && floating.Image != null)
                     WriteFloatingVmlImageRun(w, floating, images, ref imageCounter, embedded);
             }
@@ -1431,13 +1434,13 @@ namespace WordPadClone.Formats
             w.WriteAttributeString("y", "0");
             w.WriteEndElement();
             w.WriteStartElement("wp", "positionH", WP.NamespaceName);
-            w.WriteAttributeString("relativeFrom", "column");
+            w.WriteAttributeString("relativeFrom", "page");
             w.WriteStartElement("wp", "posOffset", WP.NamespaceName);
             w.WriteString(px.ToString(CultureInfo.InvariantCulture));
             w.WriteEndElement();
             w.WriteEndElement();
             w.WriteStartElement("wp", "positionV", WP.NamespaceName);
-            w.WriteAttributeString("relativeFrom", "paragraph");
+            w.WriteAttributeString("relativeFrom", "page");
             w.WriteStartElement("wp", "posOffset", WP.NamespaceName);
             w.WriteString(py.ToString(CultureInfo.InvariantCulture));
             w.WriteEndElement();

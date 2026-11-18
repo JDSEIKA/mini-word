@@ -62,6 +62,10 @@ internal static class P
                 throw new Exception("format scope");
 
             editor.InsertShape(FloatingShapeKind.Triangle);
+            int insertedShapeParagraph = -1;
+            for (int i = 0; i < doc.Paragraphs.Count; i++)
+                if (doc.Paragraphs[i].FloatingObjects.Count > 0) insertedShapeParagraph = i;
+            if (insertedShapeParagraph != 1) throw new Exception("shape insertion page");
             editor.Copy();
             editor.Paste();
             int shapeCount = 0;
