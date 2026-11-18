@@ -160,8 +160,7 @@ namespace WordPadClone
             FlowLayoutPanel insertFlow = NewRibbonFlow(insert);
             insertFlow.Controls.Add(BuildImageGroup());
             insertFlow.Controls.Add(BuildObjectGroup());
-            insertFlow.Controls.Add(BuildInsertGroup());
-            insertFlow.Controls.Add(BuildHeaderGroup());
+            insertFlow.Controls.Add(BuildInsertGroup(false));
             tabs.TabPages.Add(insert);
             TabPage tables = NewRibbonPage("Tablas");
             FlowLayoutPanel tablesFlow = NewRibbonFlow(tables);
@@ -179,6 +178,7 @@ namespace WordPadClone
 
             TabPage review = NewRibbonPage("Revisar");
             FlowLayoutPanel reviewFlow = NewRibbonFlow(review);
+            reviewFlow.Controls.Add(BuildSpellGroup());
             reviewFlow.Controls.Add(BuildCommentsGroup());
             reviewFlow.Controls.Add(BuildFindGroup());
             tabs.TabPages.Add(review);
@@ -190,9 +190,8 @@ namespace WordPadClone
             viewFlow.Controls.Add(BuildNavigationGroup());
             tabs.TabPages.Add(view);
 
-            TabPage tools = NewRibbonPage("Herramientas");
+            TabPage tools = NewRibbonPage("Ayuda");
             FlowLayoutPanel toolsFlow = NewRibbonFlow(tools);
-            toolsFlow.Controls.Add(BuildSpellGroup());
             toolsFlow.Controls.Add(BuildToolsGroup());
             tabs.TabPages.Add(tools);
 
@@ -612,8 +611,14 @@ namespace WordPadClone
 
         private RibbonGroup BuildInsertGroup()
         {
+            return BuildInsertGroup(true);
+        }
+
+        private RibbonGroup BuildInsertGroup(bool includeHeader)
+        {
             RibbonGroup group = NewGroup("Insertar");
-            group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
+            if (includeHeader)
+                group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
             group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
             group.Strip.Items.Add(LargeButton("Hipervínculo", "link", delegate { EditHyperlink(); }));
             return group;
@@ -644,6 +649,7 @@ namespace WordPadClone
         {
             RibbonGroup group = NewGroup("Página");
             group.Strip.Items.Add(LargeButton("Configurar página", "setup", delegate { PageSetup(); }));
+            group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
             return group;
         }
 
@@ -729,9 +735,7 @@ namespace WordPadClone
 
         private RibbonGroup BuildToolsGroup()
         {
-            RibbonGroup group = NewGroup("Herramientas");
-            group.Strip.Items.Add(LargeButton("Ortografía", "spell", delegate { ShowSpellCheck(); }));
-            group.Strip.Items.Add(LargeButton("Autoguardado", "save", delegate { ConfigureAutoSave(); _editor.Focus(); }));
+            RibbonGroup group = NewGroup("Ayuda");
             group.Strip.Items.Add(LargeButton("Ayuda", "help", delegate { ShowHelp(); }));
             group.Strip.Items.Add(LargeButton("Acerca de", "info", delegate { ShowAbout(); }));
             return group;
