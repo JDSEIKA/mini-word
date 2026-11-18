@@ -1,16 +1,11 @@
-# Build output
-dist/
 obj/
-bin/
-*.pdb
+build/
+test-output/
+test-out/
+test-out2/
+test-out3/
+test-out-strict/
+test-docs/
 *.user
 *.suo
-
-# Local test output
-tmp-*/
-test-output/
-test-out*/
-*.log
-
-# Local editor state
-.vs/
+*.pdb
