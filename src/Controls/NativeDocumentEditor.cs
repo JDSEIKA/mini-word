@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -2778,6 +2779,7 @@ namespace WordPadClone.Controls
 			{
 				_movingFloating = true;
 				_floatingUndoPushed = false;
+				Cursor = Cursors.SizeAll;
 				_floatingDragStart = client;
 				_floatingStartX = _selectedFloating.OffsetXTwips;
 				_floatingStartY = _selectedFloating.OffsetYTwips;
@@ -2808,6 +2810,7 @@ namespace WordPadClone.Controls
 					PushUndo();
 					_resizingFloating = true;
 					_floatingHandle = handle;
+					Cursor = ResizeCursorForHandle(handle);
 					_floatingDragStart = client;
 					_floatingStartX = _selectedFloating.OffsetXTwips;
 					_floatingStartY = _selectedFloating.OffsetYTwips;
@@ -2910,6 +2913,7 @@ namespace WordPadClone.Controls
 				PushUndo();
 				_resizingImage = true;
 				_resizeHandle = handle;
+				Cursor = ResizeCursorForHandle(handle);
 				_resizeStart = client;
 				_resizeStartWidth = layoutSegment.Width;
 				_resizeStartHeight = layoutSegment.Height;
@@ -3521,8 +3525,51 @@ namespace WordPadClone.Controls
 			if (e.Button == MouseButtons.None && !_movingFloating && !_resizingFloating
 				&& !_resizingImage && !_selecting && !_tableDragging)
 			{
-				Cursor = string.IsNullOrEmpty(LinkAtClient(e.Location)) ? Cursors.IBeam : Cursors.Hand;
+				UpdateEditorCursor(e.Location);
 			}
+		}
+
+		private static Cursor ResizeCursorForHandle(int handle)
+		{
+			switch (handle)
+			{
+				case 0:
+				case 4: return Cursors.SizeNWSE;
+				case 1:
+				case 5: return Cursors.SizeNS;
+				case 2:
+				case 6: return Cursors.SizeNESW;
+				case 3:
+				case 7: return Cursors.SizeWE;
+				default: return Cursors.Default;
+			}
+		}
+
+		private void UpdateEditorCursor(Point client)
+		{
+			int floatingHandle = FloatingHandleAt(client);
+			if (floatingHandle >= 0)
+			{
+				Cursor = ResizeCursorForHandle(floatingHandle);
+				return;
+			}
+			if (FloatingAt(client) != null)
+			{
+				Cursor = Cursors.SizeAll;
+				return;
+			}
+			int imageHandle = ImageHandleAt(client);
+			if (imageHandle >= 0)
+			{
+				Cursor = ResizeCursorForHandle(imageHandle);
+				return;
+			}
+			if (ImageSegmentAt(client) != null)
+			{
+				Cursor = Cursors.SizeAll;
+				return;
+			}
+			Cursor = string.IsNullOrEmpty(LinkAtClient(client)) ? Cursors.IBeam : Cursors.Hand;
 		}
 
 		protected override void OnMouseUp(MouseEventArgs e)
@@ -5357,6 +5404,7 @@ namespace WordPadClone.Controls
 				paragraph.FloatingObjects.Add(floatingObject);
 				_selectedFloating = floatingObject;
 				_selectedImage = null;
+				Cursor = Cursors.SizeAll;
 				AfterEdit();
 				Invalidate();
 			}
@@ -5677,6 +5725,7 @@ namespace WordPadClone.Controls
 				paragraph.FloatingObjects.Add(floatingObject);
 				_selectedFloating = floatingObject;
 				_selectedImage = null;
+				Cursor = Cursors.SizeAll;
 				AfterEdit();
 				Invalidate();
 				Focus();
@@ -5820,6 +5869,7 @@ namespace WordPadClone.Controls
 				paragraph.FloatingObjects.Add(floatingObject);
 				_selectedFloating = floatingObject;
 				_selectedImage = null;
+				Cursor = Cursors.SizeAll;
 				AfterEdit();
 				Invalidate();
 				Focus();
@@ -6413,6 +6463,41 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		private bool TryPasteClipboardImage()
+		{
+			try
+			{
+				if (!Clipboard.ContainsImage()) return false;
+				using (Image source = Clipboard.GetImage())
+				{
+					if (source == null || source.Width <= 0 || source.Height <= 0) return false;
+					if ((long)source.Width * source.Height > 50000000L) return false;
+					using (Bitmap bitmap = new Bitmap(source.Width, source.Height,
+						System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+					{
+						using (Graphics graphics = Graphics.FromImage(bitmap))
+						{
+							graphics.Clear(Color.Transparent);
+							graphics.DrawImage(source, new Rectangle(0, 0, source.Width, source.Height));
+						}
+						using (MemoryStream stream = new MemoryStream())
+						{
+							bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+							byte[] data = stream.ToArray();
+							if (data.Length == 0 || data.Length > 32 * 1024 * 1024) return false;
+							InsertImage(data, "png", source.Width, source.Height);
+							_clipboardIsShape = false;
+							return true;
+						}
+					}
+				}
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
 		public void Paste()
 		{
 			if (IsEditingTableCell)
@@ -6437,6 +6522,7 @@ namespace WordPadClone.Controls
 				Invalidate();
 				return;
 			}
+			if (TryPasteClipboardImage()) return;
 			try
 			{
 				List<FormattedRun> runs = null;

@@ -88,6 +88,22 @@ internal static class P
             || ((TextInline)plainOnlyParagraph.Inlines[0]).Format.FontFamily != "Calibri")
             throw new Exception("paste without formatting");
 
+        using (Bitmap clipboardImage = new Bitmap(24, 12))
+        {
+            Clipboard.SetImage(clipboardImage);
+            Application.DoEvents();
+            System.Threading.Thread.Sleep(100);
+            Paragraph imageParagraph = new Paragraph();
+            target.Paragraphs.Add(imageParagraph);
+            editor.PlaceCaret(5, 0);
+            editor.Paste();
+            if (imageParagraph.FloatingObjects.Count != 1
+                || imageParagraph.FloatingObjects[0].Kind != FloatingKind.Image
+                || imageParagraph.FloatingObjects[0].Image == null
+                || imageParagraph.FloatingObjects[0].Image.Data.Length == 0)
+                throw new Exception("clipboard image not embedded");
+        }
+
         form.Close();
         Console.WriteLine("CLIPBOARD_SMOKE=PASS");
     }
