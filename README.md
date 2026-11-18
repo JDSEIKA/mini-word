@@ -74,7 +74,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - **Compatibilidad de objetos**: formas y cuadros de texto se exportan como VML para Word 2007/2010+ y LibreOffice; las imágenes flotantes usan anclas relativas a página. Esto evita que cambien de página al abrirlas.
 - **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con `Ctrl+Click` se muestra el destino y se pide autorización antes de abrirlo. El botón **Hipervínculo** permite crear o editar enlaces; también se admiten enlaces por celda completa en tablas.
 - **Orden Z y rotación**: **Traer al frente**, **Enviar al fondo** y **Rotar 90°** para formas, imágenes y cuadros de texto.
-- **Archivo → Recientes**: accesos directos a los últimos 5 documentos abiertos o guardados.
+- **Archivo → Recientes**: lista desplegable con los últimos 5 documentos abiertos o guardados.
 - **Apertura segura**: rechazo de ZIP anidados malformados, bombas de descompresión, rutas `../`, entradas duplicadas, DTD/entidades XML, RTF excesivamente anidado y BOM inválidos. Macros VBA, ActiveX y scripts ODT se avisan y no se ejecutan.
 - **Enlaces en tablas**: enlace por celda completa, con color azul, subrayado, clic y conservación en DOCX.
 - **Pegar sin formato**: `Ctrl+Shift+V` o el botón de la cinta inserta solo el texto, con el formato base del documento.
