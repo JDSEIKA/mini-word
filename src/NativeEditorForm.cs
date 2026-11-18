@@ -59,7 +59,7 @@ namespace WordPadClone
 
         public NativeEditorForm(string[] args)
         {
-            Text = "Mini Word 0.0.2 Beta";
+            Text = "Mini Word 0.0.3 Beta";
             AccessibleName = "Mini Word";
             AccessibleDescription = "Procesador de textos Mini Word";
             Font = new Font(FontResolver.Resolve("Segoe UI", "Español"), 9f);
@@ -160,7 +160,7 @@ namespace WordPadClone
             FlowLayoutPanel insertFlow = NewRibbonFlow(insert);
             insertFlow.Controls.Add(BuildImageGroup());
             insertFlow.Controls.Add(BuildObjectGroup());
-            insertFlow.Controls.Add(BuildInsertGroup(false));
+            insertFlow.Controls.Add(BuildInsertGroup(false, false));
             tabs.TabPages.Add(insert);
             TabPage tables = NewRibbonPage("Tablas");
             FlowLayoutPanel tablesFlow = NewRibbonFlow(tables);
@@ -611,15 +611,16 @@ namespace WordPadClone
 
         private RibbonGroup BuildInsertGroup()
         {
-            return BuildInsertGroup(true);
+            return BuildInsertGroup(true, true);
         }
 
-        private RibbonGroup BuildInsertGroup(bool includeHeader)
+        private RibbonGroup BuildInsertGroup(bool includeHeader, bool includePageBreak)
         {
             RibbonGroup group = NewGroup("Insertar");
             if (includeHeader)
                 group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
-            group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
+            if (includePageBreak)
+                group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
             group.Strip.Items.Add(LargeButton("Hipervínculo", "link", delegate { EditHyperlink(); }));
             return group;
         }
@@ -649,7 +650,6 @@ namespace WordPadClone
         {
             RibbonGroup group = NewGroup("Página");
             group.Strip.Items.Add(LargeButton("Configurar página", "setup", delegate { PageSetup(); }));
-            group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
             return group;
         }
 
@@ -768,7 +768,7 @@ namespace WordPadClone
         private void ShowAbout()
         {
             MessageBox.Show(this,
-                "Mini Word 0.0.2 Beta\nEditor nativo de documentos DOCX.\n"
+                "Mini Word 0.0.3 Beta\nEditor nativo de documentos DOCX.\n"
                 + "Motor tipográfico y de paginación propio.\n"
                 + "Secciones, columnas, objetos flotantes, notas, comentarios y estilos de tabla.",
                 "Acerca de Mini Word", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -849,6 +849,7 @@ namespace WordPadClone
                 _editor.Focus();
             };
             group.Strip.Items.Add(_spellLanguageBox);
+            group.Strip.Items.Add(LargeButton("Ortografía", "spell", delegate { ShowSpellCheck(); }));
             return group;
         }
 
@@ -1201,7 +1202,7 @@ namespace WordPadClone
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(_path) ? "Sin título" : Path.GetFileName(_path);
-            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.2 Beta" : name + " - Mini Word 0.0.2 Beta") + (_dirty ? " *" : "");
+            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.3 Beta" : name + " - Mini Word 0.0.3 Beta") + (_dirty ? " *" : "");
         }
 
         private void NewDocument()
