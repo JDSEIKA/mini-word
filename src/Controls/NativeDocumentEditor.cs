@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using WordPadClone.Dialogs;
 using WordPadClone.Formats;
@@ -374,6 +375,18 @@ namespace WordPadClone.Controls
 		private int _spellingStart;
 
 		private int _spellingLength;
+
+		private sealed class FormattedRun
+		{
+			public string Text;
+			public RunFormat Format;
+
+			public FormattedRun(string text, RunFormat format)
+			{
+				Text = text;
+				Format = format;
+			}
+		}
 
 		private FloatingObject _clipboardFloating;
 
@@ -3800,6 +3813,12 @@ namespace WordPadClone.Controls
 
 		private void InsertRaw(int paragraphIndex, int offset, string text)
 		{
+			InsertRawFormatted(paragraphIndex, offset, text, _typingFormat);
+		}
+
+		private void InsertRawFormatted(int paragraphIndex, int offset, string text, RunFormat sourceFormat)
+		{
+			RunFormat format = sourceFormat == null ? _typingFormat.Clone() : sourceFormat.Clone();
 			Paragraph paragraph = _document.Paragraphs[paragraphIndex];
 			int num = 0;
 			for (int i = 0; i < paragraph.Inlines.Count; i++)
@@ -3809,7 +3828,7 @@ namespace WordPadClone.Controls
 				{
 					if (offset <= num)
 					{
-						paragraph.Inlines.Insert(i, new TextInline(text, _typingFormat.Clone()));
+						paragraph.Inlines.Insert(i, new TextInline(text, format.Clone()));
 						MergeRuns(paragraph);
 						return;
 					}
@@ -3821,20 +3840,20 @@ namespace WordPadClone.Controls
 					int num2 = Math.Max(0, offset - num);
 					if (num2 == 0)
 					{
-						paragraph.Inlines.Insert(i, new TextInline(text, _typingFormat.Clone()));
+						paragraph.Inlines.Insert(i, new TextInline(text, format.Clone()));
 					}
 					else
 					{
 						paragraph.Inlines.Insert(i + 1, new TextInline(textInline.Text.Substring(num2), textInline.Format.Clone()));
 						textInline.Text = textInline.Text.Substring(0, num2);
-						paragraph.Inlines.Insert(i + 1, new TextInline(text, _typingFormat.Clone()));
+						paragraph.Inlines.Insert(i + 1, new TextInline(text, format.Clone()));
 					}
 					MergeRuns(paragraph);
 					return;
 				}
 				num += length;
 			}
-			paragraph.Inlines.Add(new TextInline(text, _typingFormat.Clone()));
+			paragraph.Inlines.Add(new TextInline(text, format.Clone()));
 			MergeRuns(paragraph);
 		}
 
@@ -5643,8 +5662,437 @@ namespace WordPadClone.Controls
 			OnSelectionChanged();
 		}
 
+		private List<FormattedRun> BuildSelectedRuns()
+		{
+			List<FormattedRun> runs = new List<FormattedRun>();
+			if (!HasSelection) return runs;
+			CaretPos start;
+			CaretPos end;
+			NormalizeSelection(out start, out end);
+			for (int p = start.P; p <= end.P && p < _document.Paragraphs.Count; p++)
+			{
+				Paragraph paragraph = _document.Paragraphs[p];
+				int localStart = p == start.P ? start.Offset : 0;
+				int localEnd = p == end.P ? end.Offset : GetText(paragraph).Length;
+				int cursor = 0;
+				RunFormat lastFormat = new RunFormat("Calibri", 22);
+				for (int i = 0; i < paragraph.Inlines.Count; i++)
+				{
+					TextInline text = paragraph.Inlines[i] as TextInline;
+					if (text == null) continue;
+					int length = text.Text.Length;
+					int from = Math.Max(localStart, cursor);
+					int to = Math.Min(localEnd, cursor + length);
+					if (to > from)
+					{
+						runs.Add(new FormattedRun(text.Text.Substring(from - cursor, to - from),
+							text.Format == null ? lastFormat.Clone() : text.Format.Clone()));
+						if (text.Format != null) lastFormat = text.Format;
+					}
+					cursor += length;
+				}
+				if (p < end.P)
+					runs.Add(new FormattedRun("\n", lastFormat.Clone()));
+			}
+			return runs;
+		}
+
+		private static string EncodeBase64(string value)
+		{
+			return Convert.ToBase64String(Encoding.UTF8.GetBytes(value ?? string.Empty));
+		}
+
+		private static string DecodeBase64(string value)
+		{
+			try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)); }
+			catch { return string.Empty; }
+		}
+
+		private static string SerializeRuns(List<FormattedRun> runs)
+		{
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < runs.Count; i++)
+			{
+				FormattedRun run = runs[i];
+				RunFormat f = run.Format ?? new RunFormat("Calibri", 22);
+				sb.Append(EncodeBase64(f.FontFamily)).Append('\t')
+					.Append(f.SizeHalfPoints).Append('\t').Append(f.Bold ? 1 : 0).Append('\t')
+					.Append(f.Italic ? 1 : 0).Append('\t').Append(f.Underline ? 1 : 0).Append('\t')
+					.Append(f.Strikeout ? 1 : 0).Append('\t')
+					.Append(f.ForeColor.HasValue ? f.ForeColor.Value.ToArgb() : 0).Append('\t')
+					.Append(f.BackColor.HasValue ? f.BackColor.Value.ToArgb() : 0).Append('\t')
+					.Append(f.Script).Append('\t').Append(EncodeBase64(f.LinkUrl)).Append('\t')
+					.Append(EncodeBase64(run.Text)).Append('\n');
+			}
+			return sb.ToString();
+		}
+
+		private static List<FormattedRun> DeserializeRuns(string data)
+		{
+			List<FormattedRun> runs = new List<FormattedRun>();
+			if (string.IsNullOrEmpty(data)) return runs;
+			string[] lines = data.Split('\n');
+			for (int i = 0; i < lines.Length; i++)
+			{
+				string[] fields = lines[i].Split('\t');
+				if (fields.Length < 11) continue;
+				try
+				{
+					RunFormat f = new RunFormat("Calibri", 22);
+					f.FontFamily = DecodeBase64(fields[0]);
+					f.SizeHalfPoints = int.Parse(fields[1], CultureInfo.InvariantCulture);
+					f.Bold = fields[2] == "1";
+					f.Italic = fields[3] == "1";
+					f.Underline = fields[4] == "1";
+					f.Strikeout = fields[5] == "1";
+					int fore = int.Parse(fields[6], CultureInfo.InvariantCulture);
+					int back = int.Parse(fields[7], CultureInfo.InvariantCulture);
+					f.ForeColor = fore == 0 ? (Color?)null : Color.FromArgb(fore);
+					f.BackColor = back == 0 ? (Color?)null : Color.FromArgb(back);
+					f.Script = int.Parse(fields[8], CultureInfo.InvariantCulture);
+					f.LinkUrl = DecodeBase64(fields[9]);
+					runs.Add(new FormattedRun(DecodeBase64(fields[10]), f));
+				}
+				catch
+				{
+				}
+			}
+			return runs;
+		}
+
+		private static string HtmlEncode(string text)
+		{
+			return (text ?? string.Empty).Replace("&", "&amp;").Replace("<", "&lt;")
+				.Replace(">", "&gt;").Replace("\"", "&quot;");
+		}
+
+		private static string BuildClipboardHtml(List<FormattedRun> runs)
+		{
+			StringBuilder fragment = new StringBuilder();
+			for (int i = 0; i < runs.Count; i++)
+			{
+				FormattedRun run = runs[i];
+				RunFormat f = run.Format ?? new RunFormat("Calibri", 22);
+				string[] lines = (run.Text ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+				for (int line = 0; line < lines.Length; line++)
+				{
+					if (line > 0) fragment.Append("<br>");
+					if (lines[line].Length == 0) continue;
+					fragment.Append("<span style=\"font-family:").Append(HtmlEncode(f.FontFamily))
+						.Append(";font-size:").Append((f.SizeHalfPoints / 2f).ToString("0.#", CultureInfo.InvariantCulture)).Append("pt");
+					if (f.Bold) fragment.Append(";font-weight:bold");
+					if (f.Italic) fragment.Append(";font-style:italic");
+					if (f.Underline) fragment.Append(";text-decoration:underline");
+					if (f.ForeColor.HasValue)
+						fragment.Append(";color:#").Append(f.ForeColor.Value.R.ToString("X2"))
+							.Append(f.ForeColor.Value.G.ToString("X2")).Append(f.ForeColor.Value.B.ToString("X2"));
+					fragment.Append("\">").Append(HtmlEncode(lines[line])).Append("</span>");
+				}
+			}
+			string body = "<html><body><!--StartFragment-->" + fragment + "<!--EndFragment--></body></html>";
+			string header = "Version:0.9\r\nStartHTML:0000000000\r\nEndHTML:0000000000\r\nStartFragment:0000000000\r\nEndFragment:0000000000\r\n";
+			int startHtml = header.Length;
+			int endHtml = startHtml + Encoding.UTF8.GetByteCount(body);
+			int startFragment = startHtml + Encoding.UTF8.GetByteCount("<html><body><!--StartFragment-->");
+			int endFragment = startHtml + Encoding.UTF8.GetByteCount("<html><body><!--StartFragment-->" + fragment);
+			return string.Format(CultureInfo.InvariantCulture,
+				"Version:0.9\r\nStartHTML:{0:D10}\r\nEndHTML:{1:D10}\r\nStartFragment:{2:D10}\r\nEndFragment:{3:D10}\r\n{4}",
+				startHtml, endHtml, startFragment, endFragment, body);
+		}
+
+		private string BuildClipboardRtf(List<FormattedRun> runs)
+		{
+			try
+			{
+				DocumentModel model = new DocumentModel();
+				Paragraph paragraph = new Paragraph();
+				model.Paragraphs.Add(paragraph);
+				for (int i = 0; i < runs.Count; i++)
+				{
+					string text = runs[i].Text ?? string.Empty;
+					string[] parts = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+					for (int part = 0; part < parts.Length; part++)
+					{
+						if (part > 0)
+						{
+							paragraph = new Paragraph();
+							model.Paragraphs.Add(paragraph);
+						}
+						if (parts[part].Length > 0)
+							paragraph.Inlines.Add(new TextInline(parts[part],
+								runs[i].Format == null ? new RunFormat("Calibri", 22) : runs[i].Format.Clone()));
+					}
+				}
+				return RtfWriter.Write(model, false);
+			}
+			catch
+			{
+				return null;
+			}
+		}
+
+		private void InsertFormattedRuns(List<FormattedRun> runs)
+		{
+			if (runs == null || runs.Count == 0) return;
+			PushUndo();
+			if (HasSelection) DeleteSelectionInternal();
+			for (int i = 0; i < runs.Count; i++)
+			{
+				FormattedRun run = runs[i];
+				RunFormat format = run.Format ?? new RunFormat("Calibri", 22);
+				string text = (run.Text ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n');
+				int start = 0;
+				for (int index = 0; index <= text.Length; index++)
+				{
+					if (index == text.Length || text[index] == '\n')
+					{
+						if (index > start)
+						{
+							string piece = text.Substring(start, index - start);
+							InsertRawFormatted(_caret.P, _caret.Offset, piece, format);
+							_caret.Offset += piece.Length;
+							_anchor = new CaretPos(_caret.P, _caret.Offset);
+						}
+						if (index < text.Length)
+						{
+							SplitParagraphAt(_caret.P, _caret.Offset);
+							_caret = new CaretPos(_caret.P + 1, 0);
+							_anchor = new CaretPos(_caret.P, 0);
+						}
+						start = index + 1;
+					}
+				}
+			}
+			AfterEdit();
+			OnSelectionChanged();
+		}
+
+		private static string DecodeHtmlText(string text)
+		{
+			if (string.IsNullOrEmpty(text)) return string.Empty;
+			text = Regex.Replace(text, @"&#x([0-9a-fA-F]+);", delegate(Match m)
+			{
+				int value;
+				return int.TryParse(m.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value)
+					? char.ConvertFromUtf32(value) : string.Empty;
+			});
+			text = Regex.Replace(text, @"&#([0-9]+);", delegate(Match m)
+			{
+				int value;
+				return int.TryParse(m.Groups[1].Value, out value) ? char.ConvertFromUtf32(value) : string.Empty;
+			});
+			return text.Replace("&nbsp;", " ").Replace("&amp;", "&").Replace("&lt;", "<")
+				.Replace("&gt;", ">").Replace("&quot;", "\"").Replace("&apos;", "'");
+		}
+
+		private static string ExtractHtmlFragment(string html)
+		{
+			if (string.IsNullOrEmpty(html)) return string.Empty;
+			int start = html.IndexOf("<!--StartFragment-->", StringComparison.OrdinalIgnoreCase);
+			if (start >= 0)
+			{
+				start += "<!--StartFragment-->".Length;
+				int end = html.IndexOf("<!--EndFragment-->", start, StringComparison.OrdinalIgnoreCase);
+				return end > start ? html.Substring(start, end - start) : html.Substring(start);
+			}
+			int body = html.IndexOf("<body", StringComparison.OrdinalIgnoreCase);
+			if (body >= 0)
+			{
+				int close = html.IndexOf('>', body);
+				if (close >= 0) return html.Substring(close + 1);
+			}
+			return html;
+		}
+
+		private static List<FormattedRun> ParseHtmlRuns(string html)
+		{
+			string source = ExtractHtmlFragment(html);
+			if (string.IsNullOrEmpty(source)) return null;
+			source = Regex.Replace(source, @"<(script|style)[^>]*>.*?</\1>", string.Empty,
+				RegexOptions.IgnoreCase | RegexOptions.Singleline);
+			List<FormattedRun> runs = new List<FormattedRun>();
+			Stack<KeyValuePair<string, RunFormat>> states = new Stack<KeyValuePair<string, RunFormat>>();
+			RunFormat current = new RunFormat("Calibri", 22);
+			bool hasText = false;
+			foreach (Match match in Regex.Matches(source, @"<[^>]+>|[^<]+"))
+			{
+				string token = match.Value;
+				if (token.StartsWith("<", StringComparison.Ordinal))
+				{
+					string lower = token.ToLowerInvariant();
+					string tag = Regex.Match(lower, @"^</?\s*([a-z0-9]+)").Groups[1].Value;
+					bool closing = lower.StartsWith("</", StringComparison.Ordinal);
+					if (tag == "br" || tag == "hr")
+					{
+						runs.Add(new FormattedRun("\n", current.Clone()));
+						continue;
+					}
+					if (closing)
+					{
+						if (states.Count > 0)
+						{
+							KeyValuePair<string, RunFormat> state = states.Pop();
+							current = state.Value;
+						}
+						if (tag == "p" || tag == "div" || tag == "li" || tag == "tr" || tag == "h1"
+							|| tag == "h2" || tag == "h3" || tag == "h4" || tag == "h5" || tag == "h6")
+							runs.Add(new FormattedRun("\n", current.Clone()));
+						continue;
+					}
+					if (tag == "img" || tag == "meta" || tag == "link" || tag == "input") continue;
+					states.Push(new KeyValuePair<string, RunFormat>(tag, current.Clone()));
+					ApplyHtmlTag(tag, token, ref current);
+					continue;
+				}
+				string text = DecodeHtmlText(token);
+				text = Regex.Replace(text, @"\s+", " ");
+				if (text.Length == 0) continue;
+				if (runs.Count > 0 && runs[runs.Count - 1].Format != null && runs[runs.Count - 1].Format.SameAs(current))
+					runs[runs.Count - 1].Text += text;
+				else
+					runs.Add(new FormattedRun(text, current.Clone()));
+				hasText = true;
+			}
+			if (!hasText) return null;
+			// Trim leading/trailing structural newlines.
+			while (runs.Count > 0 && runs[0].Text == "\n") runs.RemoveAt(0);
+			while (runs.Count > 0 && runs[runs.Count - 1].Text == "\n") runs.RemoveAt(runs.Count - 1);
+			return runs;
+		}
+
+		private static void ApplyHtmlTag(string tag, string token, ref RunFormat current)
+		{
+			if (tag == "b" || tag == "strong") current.Bold = true;
+			else if (tag == "i" || tag == "em") current.Italic = true;
+			else if (tag == "u") current.Underline = true;
+			else if (tag == "s" || tag == "strike" || tag == "del") current.Strikeout = true;
+			else if (tag == "h1" || tag == "h2" || tag == "h3" || tag == "h4" || tag == "h5" || tag == "h6")
+			{
+				int level = tag[1] - '0';
+				current.Bold = true;
+				current.SizeHalfPoints = Math.Max(22, 48 - (level - 1) * 6);
+			}
+			else if (tag == "font")
+			{
+				Match size = Regex.Match(token, @"size\s*=\s*[""']?([1-7])", RegexOptions.IgnoreCase);
+				if (size.Success)
+				{
+					int[] sizes = new int[] { 0, 16, 20, 24, 28, 36, 48, 72 };
+					current.SizeHalfPoints = sizes[int.Parse(size.Groups[1].Value)];
+				}
+				Match face = Regex.Match(token, @"face\s*=\s*[""']([^""']+)", RegexOptions.IgnoreCase);
+				if (face.Success) current.FontFamily = face.Groups[1].Value;
+				Match color = Regex.Match(token, @"color\s*=\s*[""']#?([0-9a-fA-F]{6})", RegexOptions.IgnoreCase);
+				if (color.Success) current.ForeColor = ColorFromHtml(color.Groups[1].Value);
+			}
+			Match style = Regex.Match(token, @"style\s*=\s*[""']([^""']*)", RegexOptions.IgnoreCase);
+			if (!style.Success) return;
+			string[] declarations = style.Groups[1].Value.Split(';');
+			for (int i = 0; i < declarations.Length; i++)
+			{
+				int colon = declarations[i].IndexOf(':');
+				if (colon <= 0) continue;
+				string key = declarations[i].Substring(0, colon).Trim().ToLowerInvariant();
+				string value = declarations[i].Substring(colon + 1).Trim().ToLowerInvariant();
+				if (key == "font-weight" && (value == "bold" || value == "700" || value == "800" || value == "900"))
+					current.Bold = true;
+				else if (key == "font-style" && value == "italic") current.Italic = true;
+				else if (key == "text-decoration" && value.IndexOf("underline", StringComparison.Ordinal) >= 0)
+					current.Underline = true;
+				else if (key == "font-family")
+				{
+					string family = value.Split(',')[0].Trim().Trim('"', '\'');
+					if (family.Length > 0) current.FontFamily = family;
+				}
+				else if (key == "font-size")
+				{
+					Match sizeMatch = Regex.Match(value, @"([0-9.]+)\s*(px|pt|em)?");
+					if (sizeMatch.Success)
+					{
+						float number;
+						if (float.TryParse(sizeMatch.Groups[1].Value, NumberStyles.Float,
+							CultureInfo.InvariantCulture, out number))
+						{
+							float points = number;
+							string unit = sizeMatch.Groups[2].Value;
+							if (unit == "px") points = number * 0.75f;
+							else if (unit == "em") points = number * (current.SizeHalfPoints / 2f);
+							current.SizeHalfPoints = Math.Max(2, (int)Math.Round(points * 2f));
+						}
+					}
+				}
+				else if (key == "color")
+				{
+					Color? color = ParseHtmlColor(value);
+					if (color.HasValue) current.ForeColor = color;
+				}
+			}
+		}
+
+		private static Color? ParseHtmlColor(string value)
+		{
+			if (string.IsNullOrEmpty(value)) return null;
+			Match rgb = Regex.Match(value, @"rgba?\(([^)]+)\)", RegexOptions.IgnoreCase);
+			if (rgb.Success)
+			{
+				string[] parts = rgb.Groups[1].Value.Split(',');
+				if (parts.Length >= 3)
+				{
+					int r, g, b;
+					if (int.TryParse(parts[0].Trim(), out r) && int.TryParse(parts[1].Trim(), out g)
+						&& int.TryParse(parts[2].Trim(), out b))
+						return Color.FromArgb(Math.Max(0, Math.Min(255, r)),
+							Math.Max(0, Math.Min(255, g)), Math.Max(0, Math.Min(255, b)));
+				}
+			}
+			Match hex = Regex.Match(value, @"#?([0-9a-fA-F]{6})");
+			if (hex.Success)
+			{
+				try { return ColorFromHtml(hex.Groups[1].Value); }
+				catch { }
+			}
+			return null;
+		}
+
+		private static Color ColorFromHtml(string hex)
+		{
+			return Color.FromArgb(Convert.ToInt32(hex.Substring(0, 2), 16),
+				Convert.ToInt32(hex.Substring(2, 2), 16), Convert.ToInt32(hex.Substring(4, 2), 16));
+		}
+
+		private static List<FormattedRun> ParseRtfRuns(string rtf)
+		{
+			if (string.IsNullOrEmpty(rtf)) return null;
+			try
+			{
+				DocumentModel model = RtfReader.Read(rtf);
+				if (model == null || model.Paragraphs.Count == 0) return null;
+				List<FormattedRun> runs = new List<FormattedRun>();
+				for (int p = 0; p < model.Paragraphs.Count; p++)
+				{
+					Paragraph paragraph = model.Paragraphs[p];
+					for (int i = 0; i < paragraph.Inlines.Count; i++)
+					{
+						TextInline text = paragraph.Inlines[i] as TextInline;
+						if (text != null && text.Text.Length > 0)
+							runs.Add(new FormattedRun(text.Text, text.Format == null
+								? new RunFormat("Calibri", 22) : text.Format.Clone()));
+					}
+					if (p + 1 < model.Paragraphs.Count)
+						runs.Add(new FormattedRun("\n", new RunFormat("Calibri", 22)));
+				}
+				return runs.Count > 0 ? runs : null;
+			}
+			catch { return null; }
+		}
+
 		public void Copy()
 		{
+			if (IsEditingTableCell)
+			{
+				_cellEditor.Copy();
+				return;
+			}
 			if (_selectedFloating != null && !HasSelection)
 			{
 				_clipboardFloating = _selectedFloating.Clone();
@@ -5657,16 +6105,32 @@ namespace WordPadClone.Controls
 			}
 			try
 			{
-				Clipboard.SetText(SelectedText);
+				List<FormattedRun> runs = BuildSelectedRuns();
+				DataObject data = new DataObject();
+				string text = SelectedText;
+				data.SetData(DataFormats.UnicodeText, text);
+				data.SetData(DataFormats.Text, text);
+				data.SetData("MiniWord.Runs", SerializeRuns(runs));
+				string html = BuildClipboardHtml(runs);
+				if (!string.IsNullOrEmpty(html)) data.SetData(DataFormats.Html, html);
+				string rtf = BuildClipboardRtf(runs);
+				if (!string.IsNullOrEmpty(rtf)) data.SetData(DataFormats.Rtf, rtf);
+				Clipboard.SetDataObject(data, true);
 				_clipboardIsShape = false;
 			}
 			catch
 			{
+				try { Clipboard.SetText(SelectedText); } catch { }
 			}
 		}
 
 		public void Cut()
 		{
+			if (IsEditingTableCell)
+			{
+				_cellEditor.Cut();
+				return;
+			}
 			if (_selectedFloating != null && !HasSelection)
 			{
 				Copy();
@@ -5682,6 +6146,11 @@ namespace WordPadClone.Controls
 
 		public void Paste()
 		{
+			if (IsEditingTableCell)
+			{
+				_cellEditor.Paste();
+				return;
+			}
 			if (_clipboardIsShape && _clipboardFloating != null)
 			{
 				PushUndo();
@@ -5700,9 +6169,35 @@ namespace WordPadClone.Controls
 			}
 			try
 			{
+				List<FormattedRun> runs = null;
+				object custom = Clipboard.GetData("MiniWord.Runs");
+				if (custom != null) runs = DeserializeRuns(custom.ToString());
+				if (runs == null || runs.Count == 0)
+				{
+					object rtfData = Clipboard.GetData(DataFormats.Rtf);
+					if (rtfData != null) runs = ParseRtfRuns(rtfData.ToString());
+				}
+				if (runs == null || runs.Count == 0)
+				{
+					object htmlData = Clipboard.GetData(DataFormats.Html);
+					if (htmlData == null) htmlData = Clipboard.GetData("HTML Format");
+					if (htmlData != null) runs = ParseHtmlRuns(htmlData.ToString());
+				}
+				if (runs != null && runs.Count > 0)
+				{
+					InsertFormattedRuns(runs);
+					_clipboardIsShape = false;
+					return;
+				}
 				if (Clipboard.ContainsText())
 				{
-					InsertTextAtCaret(Clipboard.GetText());
+					// Plain text has no source formatting: use the document
+					// default, never the Arial 30 currently selected in the toolbar.
+					string text = Clipboard.GetText();
+					InsertFormattedRuns(new List<FormattedRun>
+					{
+						new FormattedRun(text, new RunFormat("Calibri", 22))
+					});
 				}
 			}
 			catch

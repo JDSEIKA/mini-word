@@ -2,7 +2,7 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **402 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **412 KB** y solo depende de .NET Framework 4.0 o posterior.
 
 Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
@@ -61,6 +61,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Apertura y conservación de tablas e imágenes en DOCX; las tablas se dibujan con su rejilla y las imágenes se escalan en la línea.
 - Encabezados y pies editables con `{PAGE}` y `{NUMPAGES}`; se guardan en DOCX y se dibujan en pantalla, impresión y vista previa.
 - Crear página con `Ctrl+Enter`, saltos de página, buscar/reemplazar, deshacer/rehacer, cortar/copiar/pegar e impresión.
+- **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
 - **Vista previa navegable con la rueda del ratón**: cada giro avanza o retrocede una página de la vista previa de impresión.
 - Lector OOXML compatible con paquetes *Transitional* y *Strict* (normalización de espacios de nombres).
 - Lector MS-DOC con tabla de piezas, estilos, CHPX/PAPX, secciones, listas, tablas y campos.

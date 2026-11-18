@@ -47,6 +47,18 @@ try {
     finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw "UI smoke failed" }
 
+    $clipTest = Join-Path $PSScriptRoot "ClipboardSmoke.cs"
+    $clipExe = Join-Path $tmp "ClipboardSmoke.exe"
+    & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `
+        "/out:$clipExe" `
+        /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Xml.dll /r:System.Xml.Linq.dll `
+        $source $clipTest
+    if ($LASTEXITCODE -ne 0) { throw "clipboard smoke compile failed" }
+    Push-Location $root
+    try { & $clipExe }
+    finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { throw "clipboard smoke failed" }
+
     Write-Output "REGRESSION=PASS"
 }
 finally {

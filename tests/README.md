@@ -11,7 +11,7 @@ The script:
 1. Builds `dist\MiniWord.exe`.
 2. Runs `--selftest` with the local DOC fixtures.
 3. Compiles `CorpusSmoke.cs` with the application sources.
-4. Opens, saves and reopens the available corpus (97 fixtures in this repository).
+4. Opens, saves and reopens the 101-document corpus.
 
 Expected final line:
 
