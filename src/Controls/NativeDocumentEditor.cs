@@ -3273,6 +3273,10 @@ namespace WordPadClone.Controls
 		private string LinkAtClient(Point client)
 		{
 			EnsureLayout();
+			// Layout coordinates are document coordinates.  Convert the mouse
+			// position to that space, otherwise links fail after scrolling.
+			float x = client.X - base.AutoScrollPosition.X;
+			float y = client.Y - base.AutoScrollPosition.Y;
 			for (int i = 0; i < _lines.Count; i++)
 			{
 				LayoutLine line = _lines[i];
@@ -3281,7 +3285,7 @@ namespace WordPadClone.Controls
 					LayoutSegment segment = line.Segments[j];
 					if (string.IsNullOrEmpty(segment.Format.LinkUrl)) continue;
 					RectangleF rect = new RectangleF(segment.X, segment.Y, segment.Width, segment.Height);
-					if (rect.Contains(client.X, client.Y)) return segment.Format.LinkUrl;
+					if (rect.Contains(x, y)) return segment.Format.LinkUrl;
 				}
 			}
 			return null;

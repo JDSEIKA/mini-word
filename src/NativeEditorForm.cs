@@ -283,11 +283,12 @@ namespace WordPadClone
         {
             RibbonGroup group = NewGroup("Portapapeles");
             group.Strip.Items.Add(LargeButton("Pegar", "paste", delegate { _editor.Paste(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Pegar sin formato (Ctrl+Shift+V)", "paste", delegate { _editor.PastePlainText(); _editor.Focus(); }));
+            group.Strip.Items.Add(LargeButton("Pegar sin formato", "paste", delegate { _editor.PastePlainText(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Cortar", "cut", delegate { _editor.Cut(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Copiar", "copy", delegate { _editor.Copy(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Deshacer", "undo", delegate { _editor.Undo(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Rehacer", "redo", delegate { _editor.Redo(); _editor.Focus(); }));
+            group.SetHint("Solo texto: sin fuentes, tamaños, negritas ni colores");
             return group;
         }
 
