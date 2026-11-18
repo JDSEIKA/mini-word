@@ -69,7 +69,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Apertura y conservación de tablas e imágenes en DOCX; las tablas se dibujan con su rejilla y las imágenes se escalan en la línea.
 - Encabezados y pies editables con `{PAGE}` y `{NUMPAGES}`; se guardan en DOCX y se dibujan en pantalla, impresión y vista previa.
 - Crear página con `Ctrl+Enter`, saltos de página, buscar/reemplazar, deshacer/rehacer, cortar/copiar/pegar e impresión.
-- **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
+- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro.\n- **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
 - **Vista previa navegable con la rueda del ratón**: cada giro avanza o retrocede una página de la vista previa de impresión.
 - Lector OOXML compatible con paquetes *Transitional* y *Strict* (normalización de espacios de nombres).
 - Lector MS-DOC con tabla de piezas, estilos, CHPX/PAPX, secciones, listas, tablas y campos.

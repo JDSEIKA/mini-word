@@ -40,6 +40,8 @@ internal static class P
         DataObject data = new DataObject();
         data.SetData(DataFormats.Html, html);
         Clipboard.SetDataObject(data, true);
+        Application.DoEvents();
+        System.Threading.Thread.Sleep(100);
         Paragraph htmlParagraph = new Paragraph();
         target.Paragraphs.Add(htmlParagraph);
         editor.PlaceCaret(1, 0);

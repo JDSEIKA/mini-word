@@ -2275,7 +2275,9 @@ namespace WordPadClone.Controls
 				{
 					continue;
 				}
-				Color color = layoutSegment.Format.ForeColor ?? Color.Black;
+				bool isLink = !string.IsNullOrEmpty(layoutSegment.Format.LinkUrl);
+				Color color = isLink ? Color.FromArgb(0, 82, 204)
+					: (layoutSegment.Format.ForeColor ?? Color.Black);
 				using (Brush brush5 = new SolidBrush(color))
 				{
 					RectangleF rect = new RectangleF(layoutSegment.X, layoutSegment.Y, layoutSegment.Width + 2f, layoutSegment.Height + 2f);
@@ -2287,7 +2289,7 @@ namespace WordPadClone.Controls
 						}
 					}
 					g.DrawString(layoutSegment.Text, layoutSegment.Font, brush5, layoutSegment.X, layoutSegment.Y, MeasureFormat);
-					if (layoutSegment.Format.Underline)
+					if (layoutSegment.Format.Underline || isLink)
 					{
 						using (Pen pen = new Pen(color))
 						{
@@ -5962,7 +5964,12 @@ namespace WordPadClone.Controls
 
 		private static void ApplyHtmlTag(string tag, string token, ref RunFormat current)
 		{
-			if (tag == "b" || tag == "strong") current.Bold = true;
+			if (tag == "a")
+			{
+				Match href = Regex.Match(token, @"href\s*=\s*[""']([^""']+)", RegexOptions.IgnoreCase);
+				if (href.Success) current.LinkUrl = DecodeHtmlText(href.Groups[1].Value);
+			}
+			else if (tag == "b" || tag == "strong") current.Bold = true;
 			else if (tag == "i" || tag == "em") current.Italic = true;
 			else if (tag == "u") current.Underline = true;
 			else if (tag == "s" || tag == "strike" || tag == "del") current.Strikeout = true;
