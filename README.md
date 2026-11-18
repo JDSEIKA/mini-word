@@ -2,7 +2,7 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **412 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **414 KB** y solo depende de .NET Framework 4.0 o posterior.
 
 Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
@@ -10,7 +10,7 @@ Versión: **0.0.1 Beta**. Estado: **beta pública inicial**. El alcance y las li
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 412 KB
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 414 KB
 - SHA-256: D9A70F82182751739864B801D1225F54FE0BEA91F4130BCFCDA691A98FA5710C`n
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
@@ -41,6 +41,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - **Cinta de iconos** con pestaña Archivo en azul y pestañas Inicio, Insertar, Disposición, Revisar, Ver y **Herramientas**; iconos vectoriales propios, grupos de comandos, botones grandes, tooltips y adaptación del ancho. No hay barra de menús desplegable: todos los comandos están en la cinta y en sus atajos de teclado.
 - **Herramientas**: Ortografía, Autoguardado, Ayuda y Acerca de, con iconos propios en una pestaña dedicada.
 - **Motor tipográfico nativo**: cada párrafo se divide en líneas medidas con GDI+, las líneas fluyen a páginas y el cursor, la selección y el clic se resuelven contra esas cajas de línea. No se rasterizan páginas ni se usa RichEdit para el documento.
+- **Fuentes del sistema**: el selector de fuente carga todas las familias instaladas en Windows, no una lista fija.
 - **Tipografía multilingüe**: normalización Unicode NFC, sustitución de fuente por script (latino, cirílico, griego, árabe, hebreo, índico, tailandés y CJK) y compilación con página de códigos UTF-8 para que los textos y la interfaz no pierdan acentos ni signos.
 - **Páginas reales apiladas**: todas las hojas se dibujan en vivo, con márgenes, encabezado, pie, numeración y huecos entre páginas; la barra vertical y la rueda recorren el documento de forma continua.
 - La vista de trabajo y la impresión comparten el mismo modelo de página, márgenes y saltos, de modo que el corte de página coincide con la salida impresa.
@@ -69,7 +70,9 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Apertura y conservación de tablas e imágenes en DOCX; las tablas se dibujan con su rejilla y las imágenes se escalan en la línea.
 - Encabezados y pies editables con `{PAGE}` y `{NUMPAGES}`; se guardan en DOCX y se dibujan en pantalla, impresión y vista previa.
 - Crear página con `Ctrl+Enter`, saltos de página, buscar/reemplazar, deshacer/rehacer, cortar/copiar/pegar e impresión.
-- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro.\n- **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
+- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro.
+- **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
+- **Corrección de codificación al pegar**: repara texto UTF-8 que Windows entrega como Windows-1252, por ejemplo `tambiÃÂ©n` → `también`.
 - **Vista previa navegable con la rueda del ratón**: cada giro avanza o retrocede una página de la vista previa de impresión.
 - Lector OOXML compatible con paquetes *Transitional* y *Strict* (normalización de espacios de nombres).
 - Lector MS-DOC con tabla de piezas, estilos, CHPX/PAPX, secciones, listas, tablas y campos.

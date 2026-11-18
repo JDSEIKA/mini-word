@@ -60,6 +60,21 @@ internal static class P
             || ((TextInline)plainParagraph.Inlines[0]).Format.FontFamily != "Calibri")
             throw new Exception("plain neutral clipboard");
 
+        string broken = "<html><body><!--StartFragment--><p>tambiÃÂ©n, quÃÂ©, estÃÂ¡n y ediciÃÂÃ³n</p><!--EndFragment--></body></html>";
+        DataObject brokenData = new DataObject();
+        brokenData.SetData(DataFormats.Html, broken);
+        Clipboard.SetDataObject(brokenData, true);
+        Application.DoEvents();
+        System.Threading.Thread.Sleep(100);
+        Paragraph fixedParagraph = new Paragraph();
+        target.Paragraphs.Add(fixedParagraph);
+        editor.PlaceCaret(3, 0);
+        editor.Paste();
+        string fixedText = ((TextInline)fixedParagraph.Inlines[0]).Text;
+        if (!fixedText.Contains("también") || !fixedText.Contains("qué")
+            || !fixedText.Contains("están") || !fixedText.Contains("edición"))
+            throw new Exception("mojibake clipboard: " + fixedText);
+
         form.Close();
         Console.WriteLine("CLIPBOARD_SMOKE=PASS");
     }

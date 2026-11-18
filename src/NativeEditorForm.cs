@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Text;
 using System.Globalization;
 using System.Drawing.Printing;
 using System.IO;
@@ -289,14 +290,54 @@ namespace WordPadClone
             return group;
         }
 
+        private static string[] SystemFontNames()
+        {
+            List<string> names = new List<string>();
+            try
+            {
+                using (InstalledFontCollection fonts = new InstalledFontCollection())
+                {
+                    for (int i = 0; i < fonts.Families.Length; i++)
+                    {
+                        string name = fonts.Families[i].Name;
+                        if (!string.IsNullOrEmpty(name) && !name.StartsWith("@", StringComparison.Ordinal))
+                            names.Add(name);
+                    }
+                }
+            }
+            catch
+            {
+                names.AddRange(new string[] { "Calibri", "Arial", "Segoe UI", "Tahoma" });
+            }
+            names.Sort(StringComparer.CurrentCultureIgnoreCase);
+            string[] preferred = new string[] { "Calibri", "Arial", "Times New Roman", "Cambria", "Georgia", "Verdana", "Courier New", "Segoe UI", "Garamond", "Tahoma" };
+            List<string> ordered = new List<string>();
+            for (int i = 0; i < preferred.Length; i++)
+            {
+                int index = names.FindIndex(delegate(string value)
+                {
+                    return string.Equals(value, preferred[i], StringComparison.OrdinalIgnoreCase);
+                });
+                if (index >= 0)
+                {
+                    ordered.Add(names[index]);
+                    names.RemoveAt(index);
+                }
+            }
+            ordered.AddRange(names);
+            return ordered.ToArray();
+        }
+
         private RibbonGroup BuildFontGroup()
         {
             RibbonGroup group = NewGroup("Fuente");
             _fontBox = new ToolStripComboBox("font");
             _fontBox.AutoSize = false;
-            _fontBox.Width = 132;
+            _fontBox.Width = 170;
+            _fontBox.DropDownWidth = 280;
+            _fontBox.MaxDropDownItems = 30;
             _fontBox.DropDownStyle = ComboBoxStyle.DropDown;
-            _fontBox.Items.AddRange(new string[] { "Calibri", "Arial", "Times New Roman", "Cambria", "Georgia", "Verdana", "Courier New", "Segoe UI", "Garamond", "Tahoma" });
+            _fontBox.Items.AddRange(SystemFontNames());
             _fontBox.Text = "Calibri";
             _fontBox.SelectedIndexChanged += delegate { ApplyFontFamily(); };
             _fontBox.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { ApplyFontFamily(); e.SuppressKeyPress = true; } };

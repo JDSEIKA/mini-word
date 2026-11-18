@@ -5869,6 +5869,56 @@ namespace WordPadClone.Controls
 			OnSelectionChanged();
 		}
 
+		private static bool LooksLikeMojibake(string text)
+		{
+			for (int i = 0; i < text.Length; i++)
+			{
+				char c = text[i];
+				char next = i + 1 < text.Length ? text[i + 1] : '\0';
+				if ((c == '\u00C3' || c == '\u00C2') && next >= '\u0080' && next <= '\u00BF')
+					return true;
+				if (c == '\u00E2' && next == '\u20AC') return true;
+			}
+			return false;
+		}
+
+		private static int MojibakeScore(string text)
+		{
+			int score = 0;
+			for (int i = 0; i < text.Length; i++)
+			{
+				if (text[i] == '\u00C3' || text[i] == '\u00C2' || text[i] == '\u00E2') score++;
+				if (text[i] == '\uFFFD') score += 10;
+			}
+			return score;
+		}
+
+		private static string RepairMojibake(string text)
+		{
+			if (string.IsNullOrEmpty(text)) return text;
+			try
+			{
+				// Some browsers place UTF-8 bytes on the clipboard and Windows
+				// exposes them as Windows-1252.  A double decode inserts an
+				// extra U+00C2 before the continuation byte (for example
+				// "tambiÃÂ©n").  Remove that bridge before repairing the rest.
+				text = Regex.Replace(text, "\u00C3\u00C2(?=[\u00C3\u0080-\u00BF])", "\u00C3");
+				text = Regex.Replace(text, "\u00C3\u00C3(?=[\u0080-\u00BF])", "\u00C3");
+				Encoding source = Encoding.GetEncoding(1252);
+				for (int pass = 0; pass < 4 && LooksLikeMojibake(text); pass++)
+				{
+					string candidate = Encoding.UTF8.GetString(source.GetBytes(text));
+					if (candidate.IndexOf('\uFFFD') >= 0) break;
+					if (MojibakeScore(candidate) >= MojibakeScore(text)) break;
+					text = candidate;
+				}
+			}
+			catch
+			{
+			}
+			return text;
+		}
+
 		private static string DecodeHtmlText(string text)
 		{
 			if (string.IsNullOrEmpty(text)) return string.Empty;
@@ -5908,7 +5958,7 @@ namespace WordPadClone.Controls
 
 		private static List<FormattedRun> ParseHtmlRuns(string html)
 		{
-			string source = ExtractHtmlFragment(html);
+			string source = RepairMojibake(ExtractHtmlFragment(html));
 			if (string.IsNullOrEmpty(source)) return null;
 			source = Regex.Replace(source, @"<(script|style)[^>]*>.*?</\1>", string.Empty,
 				RegexOptions.IgnoreCase | RegexOptions.Singleline);
@@ -6200,7 +6250,7 @@ namespace WordPadClone.Controls
 				{
 					// Plain text has no source formatting: use the document
 					// default, never the Arial 30 currently selected in the toolbar.
-					string text = Clipboard.GetText();
+					string text = RepairMojibake(Clipboard.GetText());
 					InsertFormattedRuns(new List<FormattedRun>
 					{
 						new FormattedRun(text, new RunFormat("Calibri", 22))
