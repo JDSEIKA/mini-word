@@ -81,6 +81,7 @@ namespace WordPadClone
 
             _ruler = new RulerBar(_editor);
             Controls.Add(_ruler);
+            LoadRecentFiles();
             Control ribbon = BuildRibbon();
             Controls.Add(ribbon);
 
@@ -101,7 +102,6 @@ namespace WordPadClone
             _autoSaveTimer.Interval = _autoSaveMinutes * 60000;
             _autoSaveTimer.Tick += delegate { AutoSaveNow(); };
             LoadAutoSaveSettings();
-            LoadRecentFiles();
 
             Load += delegate
             {
@@ -366,7 +366,11 @@ namespace WordPadClone
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                CrashLog.Write("Cargar documentos recientes", ex);
+            }
+            RefreshRecentGroup();
         }
 
         private void SaveRecentFiles()
@@ -383,9 +387,11 @@ namespace WordPadClone
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                CrashLog.Write("Guardar documentos recientes", ex);
+            }
         }
-
         private void AddRecentFile(string path)
         {
             if (string.IsNullOrEmpty(path)) return;

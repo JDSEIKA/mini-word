@@ -5112,8 +5112,22 @@ namespace WordPadClone.Controls
 			if (table == null) return false;
 			int currentRowSpan = current.Cell == null ? 1 : Math.Max(1, current.Cell.RowSpan);
 			int currentColSpan = current.Cell == null ? 1 : Math.Max(1, current.Cell.ColSpan);
+			int columns = 0;
+			for (int i = 0; i < table.Cells.Count; i++)
+				if (table.Cells[i] != null) columns = Math.Max(columns, table.Cells[i].Column + 1);
 			int targetRow = current.Row + (rowDelta < 0 ? -1 : (rowDelta > 0 ? currentRowSpan : 0));
 			int targetColumn = current.Column + (columnDelta < 0 ? -1 : (columnDelta > 0 ? currentColSpan : 0));
+			// Same row-to-row wrap as the non-editing table navigation.
+			if (columnDelta > 0 && targetColumn >= columns)
+			{
+				targetRow += currentRowSpan;
+				targetColumn = 0;
+			}
+			else if (columnDelta < 0 && targetColumn < 0)
+			{
+				targetRow -= 1;
+				targetColumn = Math.Max(0, columns - 1);
+			}
 			LayoutTableCell target = null;
 			for (int i = 0; i < table.Cells.Count; i++)
 			{
@@ -5183,11 +5197,24 @@ namespace WordPadClone.Controls
 			int colSpan = currentOwner == null ? 1 : Math.Max(1, currentOwner.ColSpan);
 			int row = currentRow + (rowDelta < 0 ? -1 : (rowDelta > 0 ? rowSpan : 0));
 			int column = currentColumn + (columnDelta < 0 ? -1 : (columnDelta > 0 ? colSpan : 0));
-			if (row < 0 || row >= table.TableCells.Length) return false;
 			int columns = 0;
 			for (int r = 0; r < table.TableCells.Length; r++)
 				if (table.TableCells[r] != null && table.TableCells[r].Length > columns)
 					columns = table.TableCells[r].Length;
+			// Right from the last cell of a row moves to the first cell of
+			// the next row instead of leaving the table.  Left from the
+			// first cell moves to the last cell of the previous row.
+			if (columnDelta > 0 && column >= columns)
+			{
+				row += rowSpan;
+				column = 0;
+			}
+			else if (columnDelta < 0 && column < 0)
+			{
+				row -= 1;
+				column = Math.Max(0, columns - 1);
+			}
+			if (row < 0 || row >= table.TableCells.Length) return false;
 			if (column < 0 || column >= columns) return false;
 			TableCell owner = FindCellOwner(table.TableCells, row, column);
 			if (owner == null) return false;
@@ -5213,6 +5240,7 @@ namespace WordPadClone.Controls
 				for (int j = 0; j < layoutTable.Cells.Count; j++)
 				{
 					LayoutTableCell layoutTableCell = layoutTable.Cells[j];
+					if (layoutTableCell.Cell != null && layoutTableCell.Cell.Covered) continue;
 					if (layoutTableCell.Row == current.Row && layoutTableCell.Column > current.Column)
 					{
 						_tableSelectionParagraph = layoutTable.Paragraph;
