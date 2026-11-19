@@ -71,6 +71,17 @@ try {
     finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw "feature audit failed" }
 
+    $caretTest = Join-Path $PSScriptRoot "CaretSmoke.cs"
+    $caretExe = Join-Path $tmp "CaretSmoke.exe"
+    & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `
+        "/out:$caretExe" `
+        /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Xml.dll /r:System.Xml.Linq.dll `
+        $source $caretTest
+    if ($LASTEXITCODE -ne 0) { throw "caret smoke compile failed" }
+    Push-Location $root
+    try { & $caretExe }
+    finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { throw "caret smoke failed" }
     $securityTest = Join-Path $PSScriptRoot "SecuritySmoke.cs"
     $securityExe = Join-Path $tmp "SecuritySmoke.exe"
     & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `

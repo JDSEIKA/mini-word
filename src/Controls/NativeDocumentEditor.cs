@@ -3495,7 +3495,7 @@ namespace WordPadClone.Controls
 				LayoutTableCell layoutTableCell = TableCellAt(e.Location);
 				if (layoutTableCell != null)
 				{
-					StartCellEditor(layoutTableCell);
+					StartCellEditor(layoutTableCell, e.Location);
 					return;
 				}
 			}
@@ -3630,7 +3630,7 @@ namespace WordPadClone.Controls
 					LayoutTableCell layoutTableCell = TableCellAt(e.Location);
 					if (layoutTableCell != null)
 					{
-						StartCellEditor(layoutTableCell);
+						StartCellEditor(layoutTableCell, e.Location);
 						if (_tableClickScroll.X != 0 || _tableClickScroll.Y != 0)
 						{
 							base.AutoScrollPosition = new Point(-_tableClickScroll.X, -_tableClickScroll.Y);
@@ -4992,6 +4992,16 @@ namespace WordPadClone.Controls
 
 		private void StartCellEditor(LayoutTableCell cell)
 		{
+			StartCellEditor(cell, Point.Empty, false);
+		}
+
+		private void StartCellEditor(LayoutTableCell cell, Point click)
+		{
+			StartCellEditor(cell, click, true);
+		}
+
+		private void StartCellEditor(LayoutTableCell cell, Point click, bool positionCaret)
+		{
 			if (cell == null || cell.Cell == null)
 			{
 				return;
@@ -5042,7 +5052,8 @@ namespace WordPadClone.Controls
 				_cellEditor.Visible = true;
 				_cellEditor.BringToFront();
 				_cellEditor.Focus();
-				_cellEditor.SelectionStart = _cellEditor.TextLength;
+				if (positionCaret) PositionCellEditorCaret(click);
+				else _cellEditor.SelectionStart = _cellEditor.TextLength;
 				UpdateCellEditorStyle();
 			}
 			finally
@@ -5053,6 +5064,16 @@ namespace WordPadClone.Controls
 			_tableSelectionStartRow = (_tableSelectionEndRow = cell.Row);
 			_tableSelectionStartColumn = (_tableSelectionEndColumn = cell.Column);
 			Invalidate();
+		}
+
+		private void PositionCellEditorCaret(Point client)
+		{
+			if (_cellEditor == null) return;
+			int x = client.X - _cellEditor.Left;
+			int y = client.Y - _cellEditor.Top;
+			int index = _cellEditor.GetCharIndexFromPosition(new Point(x, y));
+			_cellEditor.SelectionStart = Math.Max(0, Math.Min(_cellEditor.TextLength, index));
+			_cellEditor.SelectionLength = 0;
 		}
 
 		private bool FocusIsToolbar()
