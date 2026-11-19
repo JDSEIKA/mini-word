@@ -160,7 +160,6 @@ namespace WordPadClone
             FlowLayoutPanel insertFlow = NewRibbonFlow(insert);
             insertFlow.Controls.Add(BuildImageGroup());
             insertFlow.Controls.Add(BuildObjectGroup());
-            insertFlow.Controls.Add(BuildInsertGroup(false, false));
             tabs.TabPages.Add(insert);
             TabPage tables = NewRibbonPage("Tablas");
             FlowLayoutPanel tablesFlow = NewRibbonFlow(tables);
@@ -617,20 +616,11 @@ namespace WordPadClone
 
         private RibbonGroup BuildInsertGroup()
         {
-            return BuildInsertGroup(true, true);
-        }
-
-        private RibbonGroup BuildInsertGroup(bool includeHeader, bool includePageBreak)
-        {
             RibbonGroup group = NewGroup("Insertar");
-            if (includeHeader)
-                group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
-            if (includePageBreak)
-                group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
-            group.Strip.Items.Add(LargeButton("Hipervínculo", "link", delegate { EditHyperlink(); }));
+            group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
+            group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
             return group;
         }
-
         private void EditHyperlink()
         {
             using (HyperlinkDialog dialog = new HyperlinkDialog(_editor.SelectedHyperlinkUrl))

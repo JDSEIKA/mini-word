@@ -213,9 +213,15 @@ namespace WordPadClone.Controls
                         g.DrawLine(dark, 7, 11, 15, 11);
                         break;
                     case "zoom-reset":
-                        g.DrawRectangle(pen, 5, 5, 20, 22);
-                        using (Font percent = new Font("Segoe UI", 7f, FontStyle.Bold))
-                            g.DrawString("1:1", percent, accent, 8, 11);
+                        using (Font percent = new Font("Segoe UI", 8.5f, FontStyle.Bold))
+                        using (StringFormat centered = new StringFormat())
+                        {
+                            centered.Alignment = StringAlignment.Center;
+                            centered.LineAlignment = StringAlignment.Center;
+                            centered.FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.NoClip;
+                            g.DrawString("100%", percent, accent,
+                                new RectangleF(0, 0, 32, 32), centered);
+                        }
                         break;
                     case "find":
                         g.DrawEllipse(pen, 5, 5, 14, 14);
