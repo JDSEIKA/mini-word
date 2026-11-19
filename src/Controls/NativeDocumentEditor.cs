@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -16,6 +17,10 @@ namespace WordPadClone.Controls
 {
 	internal sealed class NativeDocumentEditor : ScrollableControl
 	{
+		[DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern IntPtr ShellExecute(IntPtr hwnd, string operation, string file,
+			string parameters, string directory, int showCommand);
+
 		private sealed class LayoutPage
 		{
 			public int Index;
@@ -3416,6 +3421,8 @@ namespace WordPadClone.Controls
 			if (result != DialogResult.Yes) return false;
 			try
 			{
+				IntPtr shellResult = ShellExecute(FindForm() == null ? IntPtr.Zero : FindForm().Handle, "open", uri.AbsoluteUri, null, null, 1);
+				if (shellResult.ToInt64() > 32L) return true;
 				Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
 				return true;
 			}
