@@ -307,6 +307,7 @@ namespace WordPadClone.Controls
 		private bool _showRuler = true;
 
 		private Graphics _layoutGraphics;
+		private Graphics _measureGraphics;
 
 		private CaretPos _caret;
 
@@ -1571,13 +1572,31 @@ namespace WordPadClone.Controls
 			return _fonts.Get(family, num, fontStyle);
 		}
 
+		private Graphics MeasurementGraphics()
+		{
+			if (_layoutGraphics != null) return _layoutGraphics;
+			if (_measureGraphics == null) _measureGraphics = CreateGraphics();
+			return _measureGraphics;
+		}
+
 		private float Measure(string text, Font font)
 		{
-			if (string.IsNullOrEmpty(text) || _layoutGraphics == null)
+			if (string.IsNullOrEmpty(text)) return 0f;
+			Graphics graphics = MeasurementGraphics();
+			if (graphics == null) return 0f;
+			try
 			{
+				return graphics.MeasureString(text, font, int.MaxValue, MeasureFormat).Width;
+			}
+			catch
+			{
+				if (_measureGraphics != null)
+				{
+					_measureGraphics.Dispose();
+					_measureGraphics = null;
+				}
 				return 0f;
 			}
-			return _layoutGraphics.MeasureString(text, font, int.MaxValue, MeasureFormat).Width;
 		}
 
 		private float GetDefaultLineHeight()
@@ -3166,14 +3185,17 @@ namespace WordPadClone.Controls
 			// Measure(), which returns 0 when _layoutGraphics is null.
 			Graphics graphics = _layoutGraphics;
 			bool temporary = graphics == null;
+			bool measured = false;
 			try
 			{
 				if (graphics == null) graphics = CreateGraphics();
 				float num = Math.Abs(x - seg.X);
 				for (int i = 1; i <= seg.Text.Length; i++)
 				{
-					float num2 = seg.X + graphics.MeasureString(
+					float prefix = graphics.MeasureString(
 						seg.Text.Substring(0, i), seg.Font, int.MaxValue, MeasureFormat).Width;
+					if (prefix > 0f) measured = true;
+					float num2 = seg.X + prefix;
 					float num3 = Math.Abs(x - num2);
 					if (num3 < num)
 					{
@@ -3184,11 +3206,20 @@ namespace WordPadClone.Controls
 			}
 			catch
 			{
-				return seg.Start;
+				measured = false;
 			}
 			finally
 			{
 				if (temporary && graphics != null) graphics.Dispose();
+			}
+			if (!measured && seg.Width > 0f)
+			{
+				// If the measuring surface is unavailable or reports zero
+				// widths, map the click proportionally instead of snapping to
+				// the start or end of the word.
+				float ratio = (x - seg.X) / seg.Width;
+				ratio = Math.Max(0f, Math.Min(1f, ratio));
+				result = seg.Start + (int)Math.Round(ratio * seg.Text.Length);
 			}
 			return result;
 		}
@@ -7923,7 +7954,12 @@ namespace WordPadClone.Controls
 		{
 			if (disposing)
 			{
-				if (_spellTimer != null)
+				if (_measureGraphics != null)
+			{
+				_measureGraphics.Dispose();
+				_measureGraphics = null;
+			}
+			if (_spellTimer != null)
 				{
 					_spellTimer.Dispose();
 				}

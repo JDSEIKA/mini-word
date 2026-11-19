@@ -54,6 +54,18 @@ internal static class P
         int offset = (int)caret.GetType().GetField("Offset").GetValue(caret);
         if (offset != 3) throw new Exception("caret: intra-word offset was " + offset);
 
+        bool rendered = false;
+        foreach (MethodInfo candidate in type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic))
+        {
+            if (candidate.Name != "XForOffset" || candidate.GetParameters().Length != 2
+                || candidate.GetParameters()[0].ParameterType.Name != "LayoutSegment") continue;
+            float caretX = (float)candidate.Invoke(editor, new object[] { segment, 3 });
+            if (caretX <= x + width * 0.25f || caretX >= x + width)
+                throw new Exception("caret: rendered X was " + caretX);
+            rendered = true;
+            break;
+        }
+        if (!rendered) throw new Exception("caret: XForOffset not found");
         MethodInfo mouseDown = type.GetMethod("OnMouseDown",
             BindingFlags.Instance | BindingFlags.NonPublic);
         mouseDown.Invoke(editor, new object[] { new MouseEventArgs(MouseButtons.Left, 1, click.X, click.Y, 0) });
