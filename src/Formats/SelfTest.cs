@@ -4,7 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using WordPadClone.Util;
+using WordPadClone.Controls;
 
 namespace WordPadClone.Formats
 {
@@ -217,35 +217,29 @@ namespace WordPadClone.Formats
                     "{\\rtf1\\ansi\\deff0{\\fonttbl{\\f0 Calibri;}}\\f0\\fs22 Uno\\par\\page Dos\\par}");
                 Check(log, ref ok, "RTF page break", HasPageBreak(pageBreakDoc));
 
-                // The page view uses EM_FORMATRANGE for pagination.  Verify
-                // that the measurement path returns a real page boundary.
+                // Pagination is implemented by NativeDocumentEditor, not by
+                // the RichEdit test fixture or EM_FORMATRANGE.
                 DocumentModel longDoc = new DocumentModel();
                 for (int i = 0; i < 120; i++)
                 {
                     Paragraph line = new Paragraph();
-                    line.Inlines.Add(new TextInline("Línea de prueba " + (i + 1) + " para la paginación de Mini Word.", new RunFormat()));
+                    line.Inlines.Add(new TextInline("LÃ­nea de prueba " + (i + 1) + " para la paginaciÃ³n de Mini Word.", new RunFormat()));
                     longDoc.Paragraphs.Add(line);
                 }
-                editor.Rtf = RtfWriter.Write(longDoc, false);
-                Application.DoEvents();
                 bool measured = false;
-                using (Graphics measure = editor.CreateGraphics())
+                using (Form pageForm = new Form())
                 {
-                    IntPtr hdc = measure.GetHdc();
-                    try
-                    {
-                        NativeMethods.RECT pageRect = new NativeMethods.RECT(0, 0, 12240, 15840);
-                        NativeMethods.RECT marginRect = new NativeMethods.RECT(1440, 1440, 10800, 14400);
-                        int next = NativeMethods.MeasureRange(editor.Handle, hdc, pageRect, marginRect, 0, editor.TextLength);
-                        measured = next > 0 && next < editor.TextLength;
-                        NativeMethods.ClearFormatRange(editor.Handle);
-                    }
-                    finally
-                    {
-                        measure.ReleaseHdc(hdc);
-                    }
-                }
-                Check(log, ref ok, "Page pagination", measured);
+                    pageForm.ShowInTaskbar = false;
+                    pageForm.WindowState = FormWindowState.Minimized;
+                    NativeDocumentEditor pageEditor = new NativeDocumentEditor();
+                    pageEditor.Dock = DockStyle.Fill;
+                    pageForm.Controls.Add(pageEditor);
+                    pageForm.Show();
+                    pageEditor.Document = longDoc;
+                    Application.DoEvents();
+                    measured = pageEditor.PageCount > 1;
+                    pageForm.Close();
+                }                Check(log, ref ok, "Page pagination", measured);
 
                 // RTF table round-trip, including the RichEdit representation
                 // used by the editor when a .docx table is displayed.

@@ -3157,17 +3157,38 @@ namespace WordPadClone.Controls
 
 		private int ClosestChar(LayoutSegment seg, float x)
 		{
+			if (seg == null || string.IsNullOrEmpty(seg.Text) || seg.Font == null)
+				return 0;
 			int result = seg.Start;
-			float num = Math.Abs(x - seg.X);
-			for (int i = 1; i <= seg.Text.Length; i++)
+
+			// Layout disposes its measuring Graphics.  Hit testing runs after
+			// layout, so measure with a short-lived Graphics instead of using
+			// Measure(), which returns 0 when _layoutGraphics is null.
+			Graphics graphics = _layoutGraphics;
+			bool temporary = graphics == null;
+			try
 			{
-				float num2 = seg.X + Measure(seg.Text.Substring(0, i), seg.Font);
-				float num3 = Math.Abs(x - num2);
-				if (num3 < num)
+				if (graphics == null) graphics = CreateGraphics();
+				float num = Math.Abs(x - seg.X);
+				for (int i = 1; i <= seg.Text.Length; i++)
 				{
-					num = num3;
-					result = seg.Start + i;
+					float num2 = seg.X + graphics.MeasureString(
+						seg.Text.Substring(0, i), seg.Font, int.MaxValue, MeasureFormat).Width;
+					float num3 = Math.Abs(x - num2);
+					if (num3 < num)
+					{
+						num = num3;
+						result = seg.Start + i;
+					}
 				}
+			}
+			catch
+			{
+				return seg.Start;
+			}
+			finally
+			{
+				if (temporary && graphics != null) graphics.Dispose();
 			}
 			return result;
 		}
