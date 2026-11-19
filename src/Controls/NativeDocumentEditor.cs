@@ -3394,7 +3394,7 @@ namespace WordPadClone.Controls
 			return null;
 		}
 
-		private void OpenLinkWithConfirmation(string url)
+		private bool OpenLinkWithConfirmation(string url)
 		{
 			string target = (url ?? string.Empty).Trim();
 			Uri uri;
@@ -3405,24 +3405,27 @@ namespace WordPadClone.Controls
 				MessageBox.Show(FindForm(),
 					"El enlace no tiene un destino http, https o mailto válido:\n\n" + target,
 					"Abrir hipervínculo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-				return;
+				return false;
 			}
 			DialogResult result = MessageBox.Show(FindForm(),
 				"Destino del enlace:\n\n" + uri.AbsoluteUri
-				+ "\n\n¿Autorizas que se abra con el programa predeterminado?",
-				"Abrir hipervínculo", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-			if (result != DialogResult.Yes) return;
+				+ "\n\n¿Deseas abrirlo con el programa predeterminado?\n\n"
+				+ "Sí = abrir   ·   No = omitir",
+				"Abrir hipervínculo", MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+				MessageBoxDefaultButton.Button2);
+			if (result != DialogResult.Yes) return false;
 			try
 			{
 				Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+				return true;
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show(FindForm(), "No se pudo abrir el enlace.\n\n" + ex.Message,
 					"Abrir hipervínculo", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return false;
 			}
 		}
-
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
@@ -3431,15 +3434,9 @@ namespace WordPadClone.Controls
 				return;
 			}
 			Focus();
-			if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
-			{
-				string link = LinkAtClient(e.Location);
-				if (!string.IsNullOrEmpty(link))
-				{
-					OpenLinkWithConfirmation(link);
-					return;
-				}
-			}
+			string link = LinkAtClient(e.Location);
+			if (!string.IsNullOrEmpty(link) && OpenLinkWithConfirmation(link))
+				return;
 			int num = FloatingHandleAt(e.Location);
 			if (num >= 0)
 			{
