@@ -59,7 +59,7 @@ namespace WordPadClone
 
         public NativeEditorForm(string[] args)
         {
-            Text = "Mini Word 0.0.3 Beta";
+            Text = "Mini Word 0.0.4 Beta";
             AccessibleName = "Mini Word";
             AccessibleDescription = "Procesador de textos Mini Word";
             Font = new Font(FontResolver.Resolve("Segoe UI", "Español"), 9f);
@@ -160,6 +160,7 @@ namespace WordPadClone
             FlowLayoutPanel insertFlow = NewRibbonFlow(insert);
             insertFlow.Controls.Add(BuildImageGroup());
             insertFlow.Controls.Add(BuildObjectGroup());
+            insertFlow.Controls.Add(BuildHyperlinkGroup());
             tabs.TabPages.Add(insert);
             TabPage tables = NewRibbonPage("Tablas");
             FlowLayoutPanel tablesFlow = NewRibbonFlow(tables);
@@ -621,6 +622,13 @@ namespace WordPadClone
             group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
             return group;
         }
+        private RibbonGroup BuildHyperlinkGroup()
+        {
+            RibbonGroup group = NewGroup("Insertar");
+            group.Strip.Items.Add(LargeButton("Hipervínculo", "link", delegate { EditHyperlink(); }));
+            return group;
+        }
+
         private void EditHyperlink()
         {
             using (HyperlinkDialog dialog = new HyperlinkDialog(_editor.SelectedHyperlinkUrl))
@@ -757,7 +765,7 @@ namespace WordPadClone
         private void ShowAbout()
         {
             MessageBox.Show(this,
-                "Mini Word 0.0.3 Beta\nEditor nativo de documentos DOCX.\n"
+                "Mini Word 0.0.4 Beta\nEditor nativo de documentos DOCX.\n"
                 + "Motor tipográfico y de paginación propio.\n"
                 + "Secciones, columnas, objetos flotantes, notas, comentarios y estilos de tabla.",
                 "Acerca de Mini Word", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1191,7 +1199,7 @@ namespace WordPadClone
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(_path) ? "Sin título" : Path.GetFileName(_path);
-            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.3 Beta" : name + " - Mini Word 0.0.3 Beta") + (_dirty ? " *" : "");
+            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.4 Beta" : name + " - Mini Word 0.0.4 Beta") + (_dirty ? " *" : "");
         }
 
         private void NewDocument()
