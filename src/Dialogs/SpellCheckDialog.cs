@@ -125,6 +125,7 @@ namespace WordPadClone.Dialogs
             close.Location = new Point(472, 330);
             close.Width = 80;
             close.DialogResult = DialogResult.Cancel;
+            close.Click += delegate { Close(); };
             Controls.Add(close);
             CancelButton = close;
 
