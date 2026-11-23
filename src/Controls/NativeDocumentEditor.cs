@@ -666,26 +666,48 @@ namespace WordPadClone.Controls
 		{
 			if (_document == null) return;
 			TextInline field = FieldText.Create(kind, _document, PageForParagraphIndex(_caret.P), PageCount);
-			string display = field.Text;
-			if (string.IsNullOrEmpty(display)) display = " ";
-			InsertTextAtCaret(display);
+			if (string.IsNullOrEmpty(field.Text)) field.Text = " ";
+			if (_document.TrackChanges) DocumentRevisions.MarkInsert(field);
+			PushUndo();
+			InsertAtomAtCaret(field);
+		}
+
+		private void InsertAtomAtCaret(TextInline atom)
+		{
+			if (atom == null) return;
+			if (HasSelection) DeleteSelectionInternal();
 			Paragraph p = _document.Paragraphs[_caret.P];
 			int offset = 0;
+			bool inserted = false;
 			for (int i = 0; i < p.Inlines.Count; i++)
 			{
 				TextInline run = p.Inlines[i] as TextInline;
 				if (run == null) continue;
-				if (offset <= _caret.Offset - display.Length && _caret.Offset - display.Length < offset + run.Text.Length)
+				int length = run.Text.Length;
+				if (_caret.Offset == offset)
 				{
-					run.Field = field.Field;
-					run.FieldInstruction = field.FieldInstruction;
-					run.FieldBookmark = field.FieldBookmark;
-					break;
+					p.Inlines.Insert(i, atom); inserted = true; break;
 				}
-				offset += run.Text.Length;
+				if (_caret.Offset < offset + length)
+				{
+					int local = _caret.Offset - offset;
+					TextInline before = run.Clone();
+					before.Text = run.Text.Substring(0, local);
+					TextInline after = run.Clone();
+					after.Text = run.Text.Substring(local);
+					p.Inlines.RemoveAt(i);
+					p.Inlines.Insert(i, before);
+					p.Inlines.Insert(i + 1, atom);
+					p.Inlines.Insert(i + 2, after);
+					inserted = true; break;
+				}
+				offset += length;
 			}
+			if (!inserted) p.Inlines.Add(atom);
+			_caret = new CaretPos(_caret.P, _caret.Offset + atom.Text.Length);
+			_anchor = _caret;
 			InvalidateLayout(true);
-			OnSelectionChanged();
+			AfterEdit();
 		}
 
 		public bool InsertTableOfContents(int levels)
