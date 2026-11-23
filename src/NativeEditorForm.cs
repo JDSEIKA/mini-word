@@ -52,6 +52,7 @@ namespace WordPadClone
         private bool _autoSaveEnabled;
         private int _autoSaveMinutes = 5;
         private ToolStripButton _autoSaveButton;
+        private ToolStripButton _trackChangesButton;
         private readonly List<string> _recentFiles = new List<string>();
         private RibbonGroup _recentGroup;
         private string _recoveryPath;
@@ -59,7 +60,7 @@ namespace WordPadClone
 
         public NativeEditorForm(string[] args)
         {
-            Text = "Mini Word 0.0.4 Beta";
+            Text = "Mini Word 0.0.5 Beta";
             AccessibleName = "Mini Word";
             AccessibleDescription = "Procesador de textos Mini Word";
             Font = new Font(FontResolver.Resolve("Segoe UI", "Español"), 9f);
@@ -161,6 +162,7 @@ namespace WordPadClone
             insertFlow.Controls.Add(BuildImageGroup());
             insertFlow.Controls.Add(BuildObjectGroup());
             insertFlow.Controls.Add(BuildHyperlinkGroup());
+            insertFlow.Controls.Add(BuildFieldGroup());
             tabs.TabPages.Add(insert);
             TabPage tables = NewRibbonPage("Tablas");
             FlowLayoutPanel tablesFlow = NewRibbonFlow(tables);
@@ -181,6 +183,7 @@ namespace WordPadClone
             reviewFlow.Controls.Add(BuildSpellGroup());
             reviewFlow.Controls.Add(BuildCommentsGroup());
             reviewFlow.Controls.Add(BuildFindGroup());
+            reviewFlow.Controls.Add(BuildRevisionGroup());
             tabs.TabPages.Add(review);
 
             TabPage view = NewRibbonPage("Ver");
@@ -622,6 +625,128 @@ namespace WordPadClone
             group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
             return group;
         }
+        private RibbonGroup BuildFieldGroup()
+        {
+            RibbonGroup group = NewGroup("Campos e índice");
+            group.Strip.Items.Add(LargeButton("Campo", "page", delegate { InsertFieldDialog(); }));
+            group.Strip.Items.Add(LargeButton("Índice", "paragraph", delegate { InsertToc(); }));
+            group.Strip.Items.Add(LargeButton("Actualizar índice", "find", delegate { UpdateToc(); }));
+            return group;
+        }
+
+        private void InsertFieldDialog()
+        {
+            using (FieldDialog dialog = new FieldDialog())
+            {
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                _editor.InsertField(dialog.SelectedKind);
+                _dirty = true;
+                UpdateTitle();
+                _editor.Focus();
+            }
+        }
+
+        private void InsertToc()
+        {
+            if (!_editor.InsertTableOfContents(3))
+            {
+                MessageBox.Show(this, "El documento no tiene títulos con nivel de esquema.", "Índice",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            _dirty = true;
+            UpdateTitle();
+            _editor.Focus();
+        }
+
+        private void UpdateToc()
+        {
+            if (!_editor.UpdateTableOfContents(3))
+            {
+                MessageBox.Show(this, "Inserte primero un índice.", "Índice",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            _dirty = true;
+            UpdateTitle();
+            _editor.Focus();
+        }
+
+        private void SyncTrackChangesButton()
+        {
+            if (_trackChangesButton != null) _trackChangesButton.Checked = _editor != null && _editor.TrackChanges;
+        }
+        private RibbonGroup BuildRevisionGroup()
+        {
+            RibbonGroup group = NewGroup("Cambios");
+            _trackChangesButton = LargeButton("Control de cambios", "comment", delegate
+            {
+                bool enabled = !_editor.TrackChanges;
+                _editor.SetTrackChanges(enabled);
+                _trackChangesButton.Checked = enabled;
+                _status.Text = enabled ? "Control de cambios activado" : "Control de cambios desactivado";
+                _editor.Focus();
+            });
+            _trackChangesButton.CheckOnClick = false;
+            group.Strip.Items.Add(_trackChangesButton);
+            group.Strip.Items.Add(LargeButton("Aceptar todo", "check", delegate { AcceptRevisions(); }));
+            group.Strip.Items.Add(LargeButton("Rechazar todo", "close", delegate { RejectRevisions(); }));
+            group.Strip.Items.Add(LargeButton("Comparar documentos", "find", delegate { CompareDocuments(); }));
+            return group;
+        }
+
+        private void AcceptRevisions()
+        {
+            if (!_editor.AcceptAllRevisions())
+            {
+                MessageBox.Show(this, "No hay cambios pendientes.", "Control de cambios",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            _dirty = true;
+            UpdateTitle();
+            _editor.Focus();
+        }
+
+        private void RejectRevisions()
+        {
+            if (!_editor.RejectAllRevisions())
+            {
+                MessageBox.Show(this, "No hay cambios pendientes.", "Control de cambios",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            _dirty = true;
+            UpdateTitle();
+            _editor.Focus();
+        }
+
+        private void CompareDocuments()
+        {
+            if (!ConfirmDiscard()) return;
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = "Comparar con documento";
+                dialog.Filter = DocumentFormats.Filter;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    DocumentModel other = DocumentFormats.ReadModel(dialog.FileName,
+                        DocumentFormats.Detect(dialog.FileName));
+                    DocumentModel compared = DocumentCompare.Compare(_editor.Document, other);
+                    _editor.Document = compared;
+                    _path = string.Empty;
+                    _format = DocumentFormat.Docx;
+                    _dirty = true;
+                    _lossWarningAccepted = false;
+                    UpdateTitle();
+                    UpdateStatus();
+                    _status.Text = "Documento comparado con cambios controlados";
+                    _editor.Focus();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "No se pudo comparar el documento.\n\n" + ex.Message,
+                        "Comparar documentos", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
         private RibbonGroup BuildHyperlinkGroup()
         {
             RibbonGroup group = NewGroup("Insertar");
@@ -765,7 +890,7 @@ namespace WordPadClone
         private void ShowAbout()
         {
             MessageBox.Show(this,
-                "Mini Word 0.0.4 Beta\nEditor nativo de documentos DOCX.\n"
+                "Mini Word 0.0.5 Beta\nEditor nativo de documentos DOCX.\n"
                 + "Motor tipográfico y de paginación propio.\n"
                 + "Secciones, columnas, objetos flotantes, notas, comentarios y estilos de tabla.",
                 "Acerca de Mini Word", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1149,6 +1274,7 @@ namespace WordPadClone
                     }
                     DocumentModel model = DocumentFormats.ReadModel(document, DocumentFormat.Docx);
                     _editor.Document = model;
+                    SyncTrackChangesButton();
                     _path = originalPath;
                     _format = DocumentFormat.Docx;
                     _dirty = true;
@@ -1199,7 +1325,7 @@ namespace WordPadClone
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(_path) ? "Sin título" : Path.GetFileName(_path);
-            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.4 Beta" : name + " - Mini Word 0.0.4 Beta") + (_dirty ? " *" : "");
+            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.5 Beta" : name + " - Mini Word 0.0.5 Beta") + (_dirty ? " *" : "");
         }
 
         private void NewDocument()
@@ -1217,6 +1343,7 @@ namespace WordPadClone
             first.LineSpacing = 1;
             doc.Paragraphs.Add(first);
             _editor.Document = doc;
+            SyncTrackChangesButton();
             _path = string.Empty;
             _format = DocumentFormat.Docx;
             _dirty = false;
@@ -1247,6 +1374,7 @@ namespace WordPadClone
                 if (format == DocumentFormat.Doc && !model.UnsupportedFeatures.Contains("Formato DOC 97-2003 (importación)"))
                     model.UnsupportedFeatures.Add("Formato DOC 97-2003 (importación)");
                 _editor.Document = model;
+                SyncTrackChangesButton();
                 _path = path;
                 bool importedDoc = format == DocumentFormat.Doc;
                 _format = importedDoc ? DocumentFormat.Docx : format;

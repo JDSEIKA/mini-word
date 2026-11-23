@@ -32,6 +32,26 @@ namespace WordPadClone.Formats
         public string ContentType = string.Empty;
     }
 
+    public enum FieldKind
+    {
+        None = 0,
+        Page = 1,
+        NumPages = 2,
+        Date = 3,
+        Time = 4,
+        Title = 5,
+        Author = 6,
+        FileName = 7,
+        PageRef = 8,
+        Custom = 9
+    }
+
+    public enum RevisionKind
+    {
+        None = 0,
+        Insert = 1,
+        Delete = 2
+    }
     public sealed class DocumentModel
     {
         public readonly List<Paragraph> Paragraphs = new List<Paragraph>();
@@ -51,6 +71,8 @@ namespace WordPadClone.Formats
 
         public string Title = string.Empty;
         public string Author = string.Empty;
+        public bool TrackChanges;
+        public bool ShowRevisions = true;
 
         // Page furniture is part of the document, not of the application.
         // {PAGE} and {NUMPAGES} are expanded by the view and by the printer.
@@ -258,6 +280,12 @@ namespace WordPadClone.Formats
         public string PreservedXml;
         public string PreservedText;
         public string PreservedFormatKey;
+        public bool HasModeledField;
+        public bool IsTocEntry;
+        public bool IsTocTitle;
+        public int TocLevel = 1;
+        public int TocTargetParagraph = -1;
+        public int TocPage;
         public ParagraphAlignment Alignment = ParagraphAlignment.Left;
         public int LeftIndentTwips;       // indentation of continuation lines
         public int RightIndentTwips;
@@ -379,6 +407,24 @@ namespace WordPadClone.Formats
     public sealed class TextInline : Inline
     {
         public string Text;
+        public FieldKind Field = FieldKind.None;
+        public string FieldInstruction = string.Empty;
+        public string FieldBookmark = string.Empty;
+        public RevisionKind Revision = RevisionKind.None;
+        public string RevisionAuthor = string.Empty;
+        public string RevisionDate = string.Empty;
+
+        public TextInline Clone()
+        {
+            TextInline copy = new TextInline(Text, Format == null ? new RunFormat() : Format.Clone());
+            copy.Field = Field;
+            copy.FieldInstruction = FieldInstruction;
+            copy.FieldBookmark = FieldBookmark;
+            copy.Revision = Revision;
+            copy.RevisionAuthor = RevisionAuthor;
+            copy.RevisionDate = RevisionDate;
+            return copy;
+        }
 
         public TextInline(string text, RunFormat format)
             : base(format)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -82,6 +83,57 @@ internal static class P
                     rotationRoundtrip = true;
         if (!rotationRoundtrip) throw new Exception("rotation roundtrip");
 
+        DocumentModel advanced = new DocumentModel();
+        Paragraph advancedPara = new Paragraph();
+        TextInline pageField = new TextInline("1", new RunFormat("Calibri", 22));
+        pageField.Field = FieldKind.Page;
+        pageField.FieldInstruction = " PAGE ";
+        advancedPara.Inlines.Add(pageField);
+        TextInline inserted = new TextInline("nuevo", new RunFormat("Calibri", 22));
+        inserted.Revision = RevisionKind.Insert;
+        inserted.RevisionAuthor = "Tester";
+        advancedPara.Inlines.Add(inserted);
+        TextInline deleted = new TextInline("viejo", new RunFormat("Calibri", 22));
+        deleted.Revision = RevisionKind.Delete;
+        advancedPara.Inlines.Add(deleted);
+        advanced.Paragraphs.Add(advancedPara);
+        string advancedPath = "tmp-regression/advanced-audit.docx";
+        if (File.Exists(advancedPath)) File.Delete(advancedPath);
+        DocumentFormats.SaveDocx(advancedPath, advanced);
+        DocumentModel advancedRound = DocxFormat.Read(advancedPath);
+        bool fieldRound = false, insertRound = false, deleteRound = false;
+        for (int i = 0; i < advancedRound.Paragraphs[0].Inlines.Count; i++)
+        {
+            TextInline run = advancedRound.Paragraphs[0].Inlines[i] as TextInline;
+            if (run == null) continue;
+            if (run.Field == FieldKind.Page) fieldRound = true;
+            if (run.Revision == RevisionKind.Insert) insertRound = true;
+            if (run.Revision == RevisionKind.Delete) deleteRound = true;
+        }
+        if (!fieldRound || !insertRound || !deleteRound) throw new Exception("field/revision roundtrip");
+
+        DocumentModel oldCompare = new DocumentModel();
+        Paragraph oldLine = new Paragraph();
+        oldLine.OutlineLevel = 1;
+        oldLine.Inlines.Add(new TextInline("Hola mundo viejo", new RunFormat("Calibri", 22)));
+        oldCompare.Paragraphs.Add(oldLine);
+        DocumentModel newCompare = new DocumentModel();
+        Paragraph newLine = new Paragraph();
+        newLine.OutlineLevel = 1;
+        newLine.Inlines.Add(new TextInline("Hola mundo nuevo", new RunFormat("Calibri", 22)));
+        newCompare.Paragraphs.Add(newLine);
+        DocumentModel compared = DocumentCompare.Compare(oldCompare, newCompare);
+        bool comparedInsert = false, comparedDelete = false;
+        for (int i = 0; i < compared.Paragraphs[0].Inlines.Count; i++)
+        {
+            TextInline run = compared.Paragraphs[0].Inlines[i] as TextInline;
+            if (run == null) continue;
+            if (run.Revision == RevisionKind.Insert) comparedInsert = true;
+            if (run.Revision == RevisionKind.Delete) comparedDelete = true;
+        }
+        if (!comparedInsert || !comparedDelete) throw new Exception("document compare revisions");
+        List<Paragraph> toc = TableOfContents.Build(newCompare, 3, delegate(int index) { return 1; });
+        if (toc.Count < 2 || !toc[1].IsTocEntry) throw new Exception("table of contents");
         form.Close();
         Console.WriteLine("FEATURE_AUDIT=PASS");
     }

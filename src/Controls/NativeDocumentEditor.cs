@@ -619,6 +619,125 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		public bool TrackChanges
+		{
+			get { return _document != null && _document.TrackChanges; }
+			set
+			{
+				if (_document == null) return;
+				_document.TrackChanges = value;
+				OnSelectionChanged();
+				Invalidate();
+			}
+		}
+
+		public int RevisionCount
+		{
+			get { return DocumentRevisions.Count(_document); }
+		}
+
+		public bool SetTrackChanges(bool enabled)
+		{
+			TrackChanges = enabled;
+			return TrackChanges == enabled;
+		}
+
+		public bool AcceptAllRevisions()
+		{
+			bool changed = DocumentRevisions.AcceptAll(_document);
+			if (!changed) return false;
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+
+		public bool RejectAllRevisions()
+		{
+			bool changed = DocumentRevisions.RejectAll(_document);
+			if (!changed) return false;
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+
+		public void InsertField(FieldKind kind)
+		{
+			if (_document == null) return;
+			TextInline field = FieldText.Create(kind, _document, PageForParagraphIndex(_caret.P), PageCount);
+			string display = field.Text;
+			if (string.IsNullOrEmpty(display)) display = " ";
+			InsertTextAtCaret(display);
+			Paragraph p = _document.Paragraphs[_caret.P];
+			int offset = 0;
+			for (int i = 0; i < p.Inlines.Count; i++)
+			{
+				TextInline run = p.Inlines[i] as TextInline;
+				if (run == null) continue;
+				if (offset <= _caret.Offset - display.Length && _caret.Offset - display.Length < offset + run.Text.Length)
+				{
+					run.Field = field.Field;
+					run.FieldInstruction = field.FieldInstruction;
+					run.FieldBookmark = field.FieldBookmark;
+					break;
+				}
+				offset += run.Text.Length;
+			}
+			InvalidateLayout(true);
+			OnSelectionChanged();
+		}
+
+		public bool InsertTableOfContents(int levels)
+		{
+			if (_document == null) return false;
+			EnsureHandleLayout();
+			int at = Math.Max(0, Math.Min(_document.Paragraphs.Count, _caret.P + 1));
+			at = TableOfContents.RemoveExisting(_document, at);
+			List<Paragraph> entries = TableOfContents.Build(_document, levels, PageForParagraphIndex);
+			int added = entries.Count;
+			for (int i = 0; i < entries.Count; i++)
+				if (entries[i].TocTargetParagraph >= at) entries[i].TocTargetParagraph += added;
+			_document.Paragraphs.InsertRange(at, entries);
+			_caret = new CaretPos(Math.Min(at + entries.Count, _document.Paragraphs.Count - 1), 0);
+			_anchor = _caret;
+			InvalidateLayout(true);
+			TableOfContents.RefreshPages(_document, PageForParagraphIndex);
+			Invalidate();
+			OnTextChanged();
+			OnSelectionChanged();
+			return entries.Count > 1;
+		}
+
+		public bool UpdateTableOfContents(int levels)
+		{
+			if (_document == null) return false;
+			int at = -1;
+			for (int i = 0; i < _document.Paragraphs.Count; i++)
+				if (_document.Paragraphs[i].IsTocTitle || _document.Paragraphs[i].IsTocEntry) { at = i; break; }
+			if (at < 0) return false;
+			at = TableOfContents.RemoveExisting(_document, at);
+			EnsureHandleLayout();
+			List<Paragraph> entries = TableOfContents.Build(_document, levels, PageForParagraphIndex);
+			int added = entries.Count;
+			for (int i = 0; i < entries.Count; i++)
+				if (entries[i].TocTargetParagraph >= at) entries[i].TocTargetParagraph += added;
+			_document.Paragraphs.InsertRange(at, entries);
+			InvalidateLayout(true);
+			TableOfContents.RefreshPages(_document, PageForParagraphIndex);
+			Invalidate();
+			OnTextChanged();
+			OnSelectionChanged();
+			return entries.Count > 1;
+		}
+
+		private int PageForParagraphIndex(int paragraph)
+		{
+			EnsureHandleLayout();
+			for (int i = 0; i < _lines.Count; i++)
+				if (_lines[i].Paragraph == paragraph) return _lines[i].Page + 1;
+			return 1;
+		}
 		public string SelectedText
 		{
 			get
@@ -1438,6 +1557,25 @@ namespace WordPadClone.Controls
 			y = build.Y + build.Height;
 		}
 
+		private RunFormat DisplayFormat(TextInline run)
+		{
+			RunFormat format = run == null || run.Format == null ? new RunFormat() : run.Format.Clone();
+			if (run != null && _document != null && _document.ShowRevisions && run.Revision != RevisionKind.None)
+			{
+				if (run.Revision == RevisionKind.Insert)
+				{
+					format.Underline = true;
+					format.ForeColor = Color.FromArgb(0, 128, 0);
+				}
+				else
+				{
+					format.Strikeout = true;
+					format.ForeColor = Color.FromArgb(180, 0, 0);
+				}
+			}
+			return format;
+		}
+
 		private List<Token> Tokenize(Paragraph p)
 		{
 			List<Token> list = new List<Token>();
@@ -1485,7 +1623,7 @@ namespace WordPadClone.Controls
 							}
 							Token token3 = new Token();
 							token3.Text = text.Substring(num2, j - num2);
-							token3.Format = textInline.Format;
+							token3.Format = DisplayFormat(textInline);
 							token3.Start = num;
 							token3.End = num + token3.Text.Length;
 							token3.IsSpace = true;
@@ -1500,7 +1638,7 @@ namespace WordPadClone.Controls
 							}
 							Token token4 = new Token();
 							token4.Text = text.Substring(num3, j - num3);
-							token4.Format = textInline.Format;
+							token4.Format = DisplayFormat(textInline);
 							token4.Start = num;
 							token4.End = num + token4.Text.Length;
 							list.Add(token4);
@@ -3891,6 +4029,23 @@ namespace WordPadClone.Controls
 			OnSelectionChanged();
 		}
 
+		private void MarkSelectionDeleted(CaretPos start, CaretPos end)
+		{
+			Paragraph first = _document.Paragraphs[start.P];
+			if (start.P == end.P)
+			{
+				DocumentRevisions.MarkRange(first, start.Offset, end.Offset);
+				return;
+			}
+			DocumentRevisions.MarkRange(first, start.Offset, GetText(first).Length);
+			for (int i = start.P + 1; i < end.P; i++)
+			{
+				Paragraph middle = _document.Paragraphs[i];
+				DocumentRevisions.MarkRange(middle, 0, GetText(middle).Length);
+			}
+			Paragraph last = _document.Paragraphs[end.P];
+			DocumentRevisions.MarkRange(last, 0, end.Offset);
+		}
 		private void DeleteSelectionInternal()
 		{
 			if (!HasSelection)
@@ -3900,6 +4055,13 @@ namespace WordPadClone.Controls
 			CaretPos start;
 			CaretPos end;
 			NormalizeSelection(out start, out end);
+			if (_document.TrackChanges)
+			{
+				MarkSelectionDeleted(start, end);
+				_caret = start;
+				_anchor = start;
+				return;
+			}
 			if (start.P == end.P)
 			{
 				RemoveText(_document.Paragraphs[start.P], start.Offset, end.Offset - start.Offset);
@@ -3924,6 +4086,11 @@ namespace WordPadClone.Controls
 		{
 			if (length <= 0)
 			{
+				return;
+			}
+			if (_document.TrackChanges)
+			{
+				DocumentRevisions.MarkRange(p, start, start + length);
 				return;
 			}
 			int num = 0;
@@ -3978,7 +4145,7 @@ namespace WordPadClone.Controls
 					if (list.Count > 0)
 					{
 						TextInline textInline2 = list[list.Count - 1] as TextInline;
-						if (textInline2 != null && textInline2.Format.SameAs(textInline.Format))
+						if (textInline2 != null && CanMergeRuns(textInline2, textInline))
 						{
 							textInline2.Text += textInline.Text;
 							continue;
@@ -4033,6 +4200,22 @@ namespace WordPadClone.Controls
 			InsertRawFormatted(paragraphIndex, offset, text, _typingFormat);
 		}
 
+		private static bool CanMergeRuns(TextInline a, TextInline b)
+		{
+			return a != null && b != null
+				&& a.Revision == b.Revision
+				&& a.Field == b.Field
+				&& string.Equals(a.FieldInstruction, b.FieldInstruction, StringComparison.Ordinal)
+				&& string.Equals(a.FieldBookmark, b.FieldBookmark, StringComparison.Ordinal)
+				&& a.Format.SameAs(b.Format);
+		}
+
+		private TextInline NewTypedRun(string text, RunFormat format)
+		{
+			TextInline run = new TextInline(text, format == null ? new RunFormat() : format.Clone());
+			if (_document != null && _document.TrackChanges) DocumentRevisions.MarkInsert(run);
+			return run;
+		}
 		private void InsertRawFormatted(int paragraphIndex, int offset, string text, RunFormat sourceFormat)
 		{
 			RunFormat format = sourceFormat == null ? _typingFormat.Clone() : sourceFormat.Clone();
@@ -4045,7 +4228,7 @@ namespace WordPadClone.Controls
 				{
 					if (offset <= num)
 					{
-						paragraph.Inlines.Insert(i, new TextInline(text, format.Clone()));
+						paragraph.Inlines.Insert(i, NewTypedRun(text, format));
 						MergeRuns(paragraph);
 						return;
 					}
@@ -4057,20 +4240,20 @@ namespace WordPadClone.Controls
 					int num2 = Math.Max(0, offset - num);
 					if (num2 == 0)
 					{
-						paragraph.Inlines.Insert(i, new TextInline(text, format.Clone()));
+						paragraph.Inlines.Insert(i, NewTypedRun(text, format));
 					}
 					else
 					{
 						paragraph.Inlines.Insert(i + 1, new TextInline(textInline.Text.Substring(num2), textInline.Format.Clone()));
 						textInline.Text = textInline.Text.Substring(0, num2);
-						paragraph.Inlines.Insert(i + 1, new TextInline(text, format.Clone()));
+						paragraph.Inlines.Insert(i + 1, NewTypedRun(text, format));
 					}
 					MergeRuns(paragraph);
 					return;
 				}
 				num += length;
 			}
-			paragraph.Inlines.Add(new TextInline(text, format.Clone()));
+			paragraph.Inlines.Add(NewTypedRun(text, format));
 			MergeRuns(paragraph);
 		}
 
@@ -4193,6 +4376,8 @@ namespace WordPadClone.Controls
 			{
 				PushUndo();
 				RemoveText(_document.Paragraphs[_caret.P], _caret.Offset, 1);
+				if (_document.TrackChanges)
+					_caret = new CaretPos(_caret.P, Math.Min(length, _caret.Offset + 1));
 				AfterEdit();
 			}
 			else if (_caret.P + 1 < _document.Paragraphs.Count)
@@ -7693,6 +7878,12 @@ namespace WordPadClone.Controls
 			paragraph.PageBreakBefore = source.PageBreakBefore;
 			paragraph.SectionIndex = source.SectionIndex;
 			paragraph.OutlineLevel = source.OutlineLevel;
+			paragraph.HasModeledField = source.HasModeledField;
+			paragraph.IsTocEntry = source.IsTocEntry;
+			paragraph.IsTocTitle = source.IsTocTitle;
+			paragraph.TocLevel = source.TocLevel;
+			paragraph.TocTargetParagraph = source.TocTargetParagraph;
+			paragraph.TocPage = source.TocPage;
 			paragraph.NoSpaceBetweenSameStyle = source.NoSpaceBetweenSameStyle;
 			paragraph.KeepLinesTogether = source.KeepLinesTogether;
 			paragraph.KeepWithNext = source.KeepWithNext;
@@ -7732,7 +7923,7 @@ namespace WordPadClone.Controls
 				TextInline textInline = source.Inlines[m] as TextInline;
 				if (textInline != null)
 				{
-					paragraph.Inlines.Add(new TextInline(textInline.Text, textInline.Format.Clone()));
+					paragraph.Inlines.Add(textInline.Clone());
 					continue;
 				}
 				ImageInline imageInline = source.Inlines[m] as ImageInline;

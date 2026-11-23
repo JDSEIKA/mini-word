@@ -1135,12 +1135,12 @@ namespace WordPadClone.Formats
                     {
                         w.WriteStartElement("w", "hyperlink", W.NamespaceName);
                         w.WriteAttributeString("r", "id", R.NamespaceName, link.RelId);
-                        WriteTextRun(w, text);
+                        WriteTextInline(w, text);
                         w.WriteEndElement();
                     }
                     else
                     {
-                        WriteTextRun(w, text);
+                        WriteTextInline(w, text);
                     }
                     continue;
                 }
@@ -1254,7 +1254,60 @@ namespace WordPadClone.Formats
             w.WriteEndElement();
         }
 
+        private static void WriteTextInline(XmlWriter w, TextInline text)
+        {
+            bool field = text.Field != FieldKind.None;
+            if (field)
+            {
+                w.WriteStartElement("w", "fldSimple", W.NamespaceName);
+                w.WriteAttributeString("w", "instr", W.NamespaceName,
+                    string.IsNullOrEmpty(text.FieldInstruction) ? FieldText.Instruction(text.Field, null) : text.FieldInstruction);
+            }
+            if (text.Revision == RevisionKind.Insert)
+            {
+                w.WriteStartElement("w", "ins", W.NamespaceName);
+                w.WriteAttributeString("w", "id", W.NamespaceName, NextRevisionId().ToString(CultureInfo.InvariantCulture));
+                w.WriteAttributeString("w", "author", W.NamespaceName, text.RevisionAuthor ?? "Mini Word");
+                w.WriteAttributeString("w", "date", W.NamespaceName, RevisionDate(text.RevisionDate));
+                WriteTextRun(w, text, false);
+                w.WriteEndElement();
+            }
+            else if (text.Revision == RevisionKind.Delete)
+            {
+                w.WriteStartElement("w", "del", W.NamespaceName);
+                w.WriteAttributeString("w", "id", W.NamespaceName, NextRevisionId().ToString(CultureInfo.InvariantCulture));
+                w.WriteAttributeString("w", "author", W.NamespaceName, text.RevisionAuthor ?? "Mini Word");
+                w.WriteAttributeString("w", "date", W.NamespaceName, RevisionDate(text.RevisionDate));
+                WriteTextRun(w, text, true);
+                w.WriteEndElement();
+            }
+            else
+            {
+                WriteTextRun(w, text, false);
+            }
+            if (field) w.WriteEndElement();
+        }
+
+        private static int _revisionId;
+
+        private static int NextRevisionId()
+        {
+            return System.Threading.Interlocked.Increment(ref _revisionId);
+        }
+
+        private static string RevisionDate(string value)
+        {
+            DateTime date;
+            if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date))
+                return date.ToUniversalTime().ToString("s", CultureInfo.InvariantCulture) + "Z";
+            return DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture) + "Z";
+        }
         private static void WriteTextRun(XmlWriter w, TextInline text)
+        {
+            WriteTextRun(w, text, false);
+        }
+
+        private static void WriteTextRun(XmlWriter w, TextInline text, bool deleted)
         {
             w.WriteStartElement("w", "r", W.NamespaceName);
             WriteRunProperties(w, text.Format);
@@ -1265,13 +1318,13 @@ namespace WordPadClone.Formats
                 char c = value[i];
                 if (c == '\n')
                 {
-                    FlushText(w, segment);
+                    FlushText(w, segment, deleted);
                     w.WriteStartElement("w", "br", W.NamespaceName);
                     w.WriteEndElement();
                 }
                 else if (c == '\t')
                 {
-                    FlushText(w, segment);
+                    FlushText(w, segment, deleted);
                     w.WriteStartElement("w", "tab", W.NamespaceName);
                     w.WriteEndElement();
                 }
@@ -1284,11 +1337,11 @@ namespace WordPadClone.Formats
                     segment.Append(c);
                 }
             }
-            FlushText(w, segment);
+            FlushText(w, segment, deleted);
             w.WriteEndElement();
         }
 
-        private static void FlushText(XmlWriter w, StringBuilder segment)
+        private static void FlushText(XmlWriter w, StringBuilder segment, bool deleted)
         {
             if (segment.Length == 0) return;
             w.WriteStartElement("w", "t", W.NamespaceName);
@@ -2662,6 +2715,7 @@ namespace WordPadClone.Formats
                         break;
                     }
                 }
+                if (p.HasModeledField) preserve = false;
                 if (preserve)
                 {
                     p.PreservedXml = element.ToString(SaveOptions.DisableFormatting);
@@ -2707,11 +2761,17 @@ namespace WordPadClone.Formats
 
             private void ReadInlines(XElement parent, Paragraph p, RunFormat baseRun, string paragraphStyle)
             {
+                ReadInlines(parent, p, baseRun, paragraphStyle, RevisionKind.None, string.Empty, string.Empty);
+            }
+
+            private void ReadInlines(XElement parent, Paragraph p, RunFormat baseRun, string paragraphStyle,
+                RevisionKind revision, string author, string date)
+            {
                 foreach (XElement child in parent.Elements())
                 {
                     if (child.Name == W + "r")
                     {
-                        ReadRun(child, p, baseRun, paragraphStyle);
+                        ReadRun(child, p, baseRun, paragraphStyle, revision, author, date);
                     }
                     else if (child.Name == W + "hyperlink")
                     {
@@ -2721,23 +2781,79 @@ namespace WordPadClone.Formats
                         string rid = (string)child.Attribute(R + "id");
                         if (rid != null && _rels.ContainsKey(rid)) link.LinkUrl = _rels[rid];
                         foreach (XElement run in child.Elements(W + "r"))
-                            ReadRun(run, p, link, paragraphStyle);
+                            ReadRun(run, p, link, paragraphStyle, revision, author, date);
                     }
-                    else if (child.Name == W + "ins" || child.Name == W + "smartTag" || child.Name == W + "sdt"
-                        || child.Name == W + "sdtContent" || child.Name == W + "fldSimple")
+                    else if (child.Name == W + "ins" || child.Name == W + "moveTo")
                     {
-                        ReadInlines(child, p, baseRun, paragraphStyle);
+                        ReadInlines(child, p, baseRun, paragraphStyle, RevisionKind.Insert,
+                            (string)child.Attribute(W + "author") ?? "Autor",
+                            (string)child.Attribute(W + "date") ?? string.Empty);
+                    }
+                    else if (child.Name == W + "del" || child.Name == W + "moveFrom")
+                    {
+                        ReadInlines(child, p, baseRun, paragraphStyle, RevisionKind.Delete,
+                            (string)child.Attribute(W + "author") ?? "Autor",
+                            (string)child.Attribute(W + "date") ?? string.Empty);
+                    }
+                    else if (child.Name == W + "fldSimple")
+                    {
+                        string instr = (string)child.Attribute(W + "instr") ?? string.Empty;
+                        FieldKind field = FieldText.ParseInstruction(instr);
+                        if (field != FieldKind.None)
+                        {
+                            TextInline run = NewRun(CollectSimpleFieldText(child), baseRun.Clone(), revision, author, date);
+                            run.Field = field;
+                            run.FieldInstruction = instr;
+                            p.Inlines.Add(run);
+                            p.HasModeledField = true;
+                        }
+                        else
+                        {
+                            ReadInlines(child, p, baseRun, paragraphStyle, revision, author, date);
+                        }
+                    }
+                    else if (child.Name == W + "smartTag" || child.Name == W + "sdt"
+                        || child.Name == W + "sdtContent")
+                    {
+                        ReadInlines(child, p, baseRun, paragraphStyle, revision, author, date);
                     }
                     else if (child.Name == W + "bookmarkStart" || child.Name == W + "bookmarkEnd"
                         || child.Name == W + "proofErr" || child.Name == W + "commentRangeStart"
-                        || child.Name == W + "commentRangeEnd" || child.Name == W + "del")
+                        || child.Name == W + "commentRangeEnd")
                     {
                         // ignored
                     }
                 }
             }
 
+            private static string CollectSimpleFieldText(XElement element)
+            {
+                StringBuilder text = new StringBuilder();
+                foreach (XElement node in element.Descendants())
+                {
+                    if (node.Name == W + "t" || node.Name == W + "delText") text.Append(node.Value);
+                    else if (node.Name == W + "tab") text.Append('\t');
+                    else if (node.Name == W + "br" || node.Name == W + "cr") text.Append('\n');
+                }
+                return text.ToString();
+            }
+
+            private static TextInline NewRun(string text, RunFormat format, RevisionKind revision,
+                string author, string date)
+            {
+                TextInline run = new TextInline(text, format);
+                run.Revision = revision;
+                run.RevisionAuthor = author ?? string.Empty;
+                run.RevisionDate = date ?? string.Empty;
+                return run;
+            }
             private void ReadRun(XElement run, Paragraph p, RunFormat baseRun, string paragraphStyle)
+            {
+                ReadRun(run, p, baseRun, paragraphStyle, RevisionKind.None, string.Empty, string.Empty);
+            }
+
+            private void ReadRun(XElement run, Paragraph p, RunFormat baseRun, string paragraphStyle,
+                RevisionKind revision, string author, string date)
             {
                 RunFormat fmt = baseRun.Clone();
                 XElement rPr = run.Element(W + "rPr");
@@ -2756,7 +2872,7 @@ namespace WordPadClone.Formats
                 StringBuilder text = new StringBuilder();
                 foreach (XElement child in run.Elements())
                 {
-                    if (child.Name == W + "t")
+                    if (child.Name == W + "t" || child.Name == W + "delText")
                     {
                         text.Append(child.Value);
                     }
@@ -2789,7 +2905,7 @@ namespace WordPadClone.Formats
                         {
                             if (text.Length > 0)
                             {
-                                p.Inlines.Add(new TextInline(text.ToString(), fmt.Clone()));
+                                p.Inlines.Add(NewRun(text.ToString(), fmt.Clone(), revision, author, date));
                                 text.Length = 0;
                             }
                             RunFormat refFormat = fmt.Clone();
@@ -2804,7 +2920,7 @@ namespace WordPadClone.Formats
                         {
                             if (text.Length > 0)
                             {
-                                p.Inlines.Add(new TextInline(text.ToString(), fmt.Clone()));
+                                p.Inlines.Add(NewRun(text.ToString(), fmt.Clone(), revision, author, date));
                                 text.Length = 0;
                             }
                             p.Inlines.Add(new CommentInline(_commentsById[id], fmt.Clone()));
@@ -2818,7 +2934,7 @@ namespace WordPadClone.Formats
                         {
                             if (text.Length > 0)
                             {
-                                p.Inlines.Add(new TextInline(text.ToString(), fmt.Clone()));
+                                p.Inlines.Add(NewRun(text.ToString(), fmt.Clone(), revision, author, date));
                                 text.Length = 0;
                             }
                             img.Format = fmt.Clone();
@@ -2833,7 +2949,7 @@ namespace WordPadClone.Formats
                         {
                             if (text.Length > 0)
                             {
-                                p.Inlines.Add(new TextInline(text.ToString(), fmt.Clone()));
+                                p.Inlines.Add(NewRun(text.ToString(), fmt.Clone(), revision, author, date));
                                 text.Length = 0;
                             }
                             img.Format = fmt.Clone();
@@ -2854,7 +2970,7 @@ namespace WordPadClone.Formats
                         {
                             if (text.Length > 0)
                             {
-                                p.Inlines.Add(new TextInline(text.ToString(), fmt.Clone()));
+                                p.Inlines.Add(NewRun(text.ToString(), fmt.Clone(), revision, author, date));
                                 text.Length = 0;
                             }
                         }
@@ -2866,7 +2982,7 @@ namespace WordPadClone.Formats
                         {
                             if (text.Length > 0)
                             {
-                                p.Inlines.Add(new TextInline(text.ToString(), fmt.Clone()));
+                                p.Inlines.Add(NewRun(text.ToString(), fmt.Clone(), revision, author, date));
                                 text.Length = 0;
                             }
                             p.FloatingObjects.Add(embedded);
@@ -2875,7 +2991,7 @@ namespace WordPadClone.Formats
                 }
 
                 if (text.Length > 0)
-                    p.Inlines.Add(new TextInline(text.ToString(), fmt.Clone()));
+                    p.Inlines.Add(NewRun(text.ToString(), fmt.Clone(), revision, author, date));
             }
 
             private bool TryReadFloatingDrawing(XElement drawing, Paragraph p, RunFormat fmt)

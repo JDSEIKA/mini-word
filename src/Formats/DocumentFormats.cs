@@ -206,6 +206,8 @@ namespace WordPadClone.Formats
             copy.MarginBottomTwips = source.MarginBottomTwips;
             copy.Title = source.Title;
             copy.Author = source.Author;
+            copy.TrackChanges = source.TrackChanges;
+            copy.ShowRevisions = source.ShowRevisions;
             copy.HeaderText = source.HeaderText;
             copy.FooterText = source.FooterText;
             copy.HeaderDistanceTwips = source.HeaderDistanceTwips;
@@ -256,6 +258,12 @@ namespace WordPadClone.Formats
                 p.PreservedXml = sp.PreservedXml;
                 p.PreservedText = sp.PreservedText;
 			p.PreservedFormatKey = sp.PreservedFormatKey;
+                p.HasModeledField = sp.HasModeledField;
+                p.IsTocEntry = sp.IsTocEntry;
+                p.IsTocTitle = sp.IsTocTitle;
+                p.TocLevel = sp.TocLevel;
+                p.TocTargetParagraph = sp.TocTargetParagraph;
+                p.TocPage = sp.TocPage;
                 p.Alignment = sp.Alignment;
                 p.LeftIndentTwips = sp.LeftIndentTwips;
                 p.RightIndentTwips = sp.RightIndentTwips;
@@ -297,7 +305,7 @@ namespace WordPadClone.Formats
                     TextInline t = sp.Inlines[j] as TextInline;
                     if (t != null)
                     {
-                        p.Inlines.Add(new TextInline(t.Text, t.Format.Clone()));
+                        p.Inlines.Add(t.Clone());
                         continue;
                     }
                     ImageInline img = sp.Inlines[j] as ImageInline;

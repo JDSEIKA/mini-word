@@ -88,7 +88,7 @@ La beta pública sigue bloqueada por campos/TOC, relaciones de partes desconocid
 
 ### Instalador y versión
 
-- Versión de ensamblado: 0.0.4 Beta.
+- Versión de ensamblado: 0.0.5 Beta.
 - installer/install.ps1: instalación portátil en %LOCALAPPDATA%\\MiniWord, acceso directo y VERSION.txt.
 - **No está firmado digitalmente**; no se declara instalador firmado.
 - No hay actualizador automático todavía.
