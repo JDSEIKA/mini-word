@@ -4,24 +4,24 @@ Procesador de textos de escritorio para Windows con un **motor tipográfico prop
 
 El ejecutable es un único `MiniWord.exe` de unos **452 KB** y solo depende de .NET Framework 4.0 o posterior.
 
-Versión: **0.0.7 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
+Versión: **0.0.8 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
 ## Ejecutable incluido en el repositorio
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
 - [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 452 KB
-- SHA-256: B3013001E9CFED568C62350FB61C5E60E96A24EE22F02E123E82DFFB3AB97CF2
+- SHA-256: 5070A073C2A86C6848F4853F1F360DB2AE84FAD2C01AD9EF9D0B951BD43E760D
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
 ## Probar y reportar errores
 
-La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.7-beta).
+La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.8-beta).
 
-- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.7-beta/MiniWord.exe)
-- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.7-beta/MiniWord-Beta.zip)
-- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.7-beta/MiniWord-Installer.zip)
+- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.8-beta/MiniWord.exe)
+- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.8-beta/MiniWord-Beta.zip)
+- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.8-beta/MiniWord-Installer.zip)
 
 Para reportar un fallo usa el [formulario de error](https://github.com/JDSEIKA/mini-word/issues/new?template=bug_report.yml). Incluye un DOCX mínimo sin datos privados, la versión de Windows y los pasos exactos. Más detalles en [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -39,8 +39,8 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 
 ## Funciones
 
-- **Cinta de iconos** con pestaña Archivo en azul y pestañas Inicio, Insertar, Disposición, Revisar, Ver y **Herramientas**; iconos vectoriales propios, grupos de comandos, botones grandes, tooltips y adaptación del ancho. No hay barra de menús desplegable: todos los comandos están en la cinta y en sus atajos de teclado.
-- **Herramientas**: Ortografía, Autoguardado, Ayuda y Acerca de, con iconos propios en una pestaña dedicada.
+- **Cinta de iconos** con pestaña Archivo en azul y pestañas Inicio, Insertar, Tablas, Disposición, Revisar, Ver y **Ayuda**; iconos vectoriales propios, grupos de comandos, botones grandes, tooltips y adaptación del ancho. No hay barra de menús desplegable: todos los comandos están en la cinta y en sus atajos de teclado.
+- **Ayuda**: Autoguardado, Ayuda y Acerca de, con iconos propios en una pestaña dedicada.
 - **Motor tipográfico nativo**: cada párrafo se divide en líneas medidas con GDI+, las líneas fluyen a páginas y el cursor, la selección y el clic se resuelven contra esas cajas de línea. No se rasterizan páginas ni se usa RichEdit para el documento.
 - **Fuentes del sistema**: el selector de fuente carga todas las familias instaladas en Windows, no una lista fija.
 - **Tipografía multilingüe**: normalización Unicode NFC, sustitución de fuente por script (latino, cirílico, griego, árabe, hebreo, índico, tailandés y CJK) y compilación con página de códigos UTF-8 para que los textos y la interfaz no pierdan acentos ni signos.
@@ -48,10 +48,10 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - La vista de trabajo y la impresión comparten el mismo modelo de página, márgenes y saltos, de modo que el corte de página coincide con la salida impresa.
 - Formato de carácter: fuente, tamaño, negrita, cursiva, subrayado, tachado, color, resaltado, superíndice y subíndice.
 - Formato de párrafo: alineación, sangrías con iconos para aumentar/disminuir, espaciado, interlineado, tabulaciones y viñetas.
-- **Corrección ortográfica del sistema**: usa el corrector de Windows (Windows 8+) por COM, sin diccionarios empaquetados; subraya palabras dudosas y ofrece sugerencias, omitir y agregar al diccionario al pulsar con el botón derecho. El control de idioma está en Herramientas.
-- **Tablas**: pestaña propia con insertar/editar tabla, **Agregar fila**, **Eliminar fila**, fusionar/dividir celdas, añadir/quitar columnas y edición directa de celdas; conservación en DOCX (`gridSpan`/`vMerge`).
+- **Corrección ortográfica del sistema**: usa el corrector de Windows (Windows 8+) por COM, sin diccionarios empaquetados; subraya palabras dudosas y ofrece sugerencias, omitir y agregar al diccionario al pulsar con el botón derecho. El control de idioma está en Revisar.
+- **Tablas**: pestaña propia con insertar/editar tabla, **Agregar fila**, **Eliminar fila**, fusionar/dividir celdas, añadir/quitar columnas, edición directa de celdas y **Repetir encabezado**; conservación en DOCX (`gridSpan`/`vMerge`/`tblHeader`). Las celdas pueden contener varios tramos con formato y enlace.
 - **Párrafo**: diálogo en Disposición con alineación, nivel de esquema, sangrías, especial/francesa, espaciado anterior/posterior, interlineado, paginación y control de viudas.
-- **Revisión ortográfica**: Herramientas incluye el control de activación, el idioma ortográfico detectado del sistema y el botón Ortografía, que abre el diálogo con palabra dudosa, sugerencias, cambiar, ignorar, ignorar todas y añadir al diccionario.
+- **Revisión ortográfica**: Revisar incluye el control de activación, el idioma ortográfico detectado del sistema y el botón Ortografía, que abre el diálogo con palabra dudosa, sugerencias, cambiar, ignorar, ignorar todas y añadir al diccionario.
 - **Imágenes**: inserción desde archivo como objeto flotante, ancho máximo de 2/3 de la página calculado antes de importar, relación de aspecto bloqueada, selección con clic, ocho tiradores para redimensionar y arrastre directo para recolocarlas en la hoja.
 - **Cuadros de texto y formas**: se insertan seleccionados, con ocho tiradores para redimensionar y arrastre para moverlos; el doble clic o **Formato de texto** permite editar fuente, tamaño, negrita, cursiva, subrayado y color. El selector gráfico permite rectángulo, círculo, triángulo, estrella, flecha derecha, flecha izquierda, rombo y corazón. Color de forma permite cambiar relleno, contorno y grosor.
 - **Fecha**: inserta la fecha actual con el formato largo del idioma de Windows.
@@ -63,7 +63,11 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - **Secciones y columnas periodísticas**: `DocumentSection` conserva tamaño, orientación, márgenes y 1-4 columnas; Disposición → Columnas y Salto de sección.
 - **Objetos flotantes**: imágenes, cuadros de texto y formas con posición, ajuste cuadrado/superior-inferior y orden detrás/delante del texto.
 - **Encabezados y pies por sección**: cada sección conserva su propio texto e imágenes, con relaciones DOCX independientes.
-- **Notas y comentarios**: notas al pie/finales, referencias en el texto y panel de comentarios en Revisar.
+- **Notas y comentarios**: notas al pie/finales, referencias en el texto, panel de comentarios, respuestas y estado resuelto local.
+- **Campos e índice**: campos PAGE, NUMPAGES, DATE, TIME, TITLE y AUTHOR; índice por niveles de esquema, refresco de páginas y actualización manual.
+- **Control de cambios**: inserciones/eliminaciones por tramo, aceptar/rechazar un cambio o todos, y round-trip DOCX (`w:ins`/`w:del`).
+- **Comparar documentos**: alineación LCS por párrafos, diferencias por palabra y aviso de cambios de formato.
+- **Estilos y listas**: presets Normal, Título, Subtítulo, Título 1–3 y Cita; listas de hasta 9 niveles.
 - **Estilos de tabla**: estilo, bordes, sombreado, encabezado y celdas combinadas.
 - **Objetos incrustados**: detección, vista previa y conservación del binario OLE en `word/embeddings/`; no se ejecuta el objeto.
 - **Regla fija activa por defecto**: Ver → Regla muestra una banda superior de la interfaz en centímetros; permanece visible al desplazarse por todas las hojas.
@@ -72,11 +76,11 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Encabezados y pies editables con `{PAGE}` y `{NUMPAGES}`; se guardan en DOCX y se dibujan en pantalla, impresión y vista previa.
 - Crear página con `Ctrl+Enter`, saltos de página, buscar/reemplazar, deshacer/rehacer, cortar/copiar/pegar e impresión.
 - **Compatibilidad de objetos**: formas y cuadros de texto se exportan como VML para Word 2007/2010+ y LibreOffice; las imágenes flotantes usan anclas relativas a página. Esto evita que cambien de página al abrirlas.
-- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con `Ctrl+Click` se muestra el destino y se pide autorización antes de abrirlo. El botón **Hipervínculo** permite crear o editar enlaces; también se admiten enlaces por celda completa en tablas.
+- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con `Ctrl+Click` se muestra el destino y se pide autorización antes de abrirlo. El botón **Hipervínculo** permite crear o editar enlaces; las celdas de tabla admiten enlaces por celda y por tramo, y al hacer clic se abre solo el tramo enlazado.
 - **Orden Z y rotación**: **Traer al frente**, **Enviar al fondo** y **Rotar 90°** para formas, imágenes y cuadros de texto.
 - **Archivo → Recientes**: lista desplegable con los últimos 5 documentos abiertos o guardados.
 - **Apertura segura**: rechazo de ZIP anidados malformados, bombas de descompresión, rutas `../`, entradas duplicadas, DTD/entidades XML, RTF excesivamente anidado y BOM inválidos. Macros VBA, ActiveX y scripts ODT se avisan y no se ejecutan.
-- **Enlaces en tablas**: enlace por celda completa, con color azul, subrayado, clic y conservación en DOCX.
+- **Enlaces en tablas**: por celda o por tramo, con color azul, subrayado, clic y conservación en DOCX.
 - **Pegar sin formato**: `Ctrl+Shift+V` o el botón de la cinta inserta solo el texto, con el formato base del documento.
 - **Portapapeles con formato**: al pegar desde el navegador o desde Word conserva tamaño, negrita, cursiva, subrayado y color; el texto plano se pega con el formato base del documento, no con el tamaño seleccionado en la barra.
 - **Corrección de codificación al pegar**: repara texto UTF-8 que Windows entrega como Windows-1252, por ejemplo `tambiÃÂ©n` → `también`.
@@ -90,6 +94,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Auditoría RichEdit: [`docs/AUDITORIA_RICHEDIT.md`](docs/AUDITORIA_RICHEDIT.md).
 - Dictado y lectura en voz alta: [`docs/VOZ_DICTADO.md`](docs/VOZ_DICTADO.md).
 - Accesibilidad de comandos: [`docs/ACCESIBILIDAD_FUNCIONES.md`](docs/ACCESIBILIDAD_FUNCIONES.md).
+- Auditoría estricta 2026-11-23: [`docs/AUDITORIA_2026-11-23.md`](docs/AUDITORIA_2026-11-23.md).
 - Auditoría de seguridad y recuento consolidado: [`docs/FALLOS_2026-11-18.md`](docs/FALLOS_2026-11-18.md).
 
 ## Compilar
@@ -164,7 +169,7 @@ Se cubre el subconjunto editable que utiliza un procesador de textos ligero:
 - tamaño de página, orientación, márgenes, encabezados y pies con campos de página;
 - la vista dibuja las hojas apiladas; rango de página, márgenes y encabezados coinciden con la impresión.
 
-Limitaciones conocidas: la edición directa de celdas usa un campo de texto superpuesto y no conserva formato rico por celda; las tablas se dividen en páginas por filas completas y las fusiones verticales complejas se simplifican. Las columnas se aproximan por bandas y los saltos continuos se tratan como salto de página. El ajuste de texto es cuadrado/superior-inferior, no contorno exacto. Las notas no reservan espacio en el flujo y los comentarios se consultan en un panel; no se editan desde el texto. Los objetos OLE se muestran mediante su vista previa, no se ejecutan ni se conserva su binario. En `.doc` se importan encabezados e imágenes del flujo Data, pero las formas Escher, los cuadros de texto y la asociación exacta con su ancla siguen siendo limitados. La corrección ortográfica requiere el corrector de Windows (Windows 8 o posterior) y su idioma debe estar instalado.
+Limitaciones conocidas: las celdas conservan varios tramos al abrir y guardar DOCX, pero al editar su texto se convierten en un tramo único; la vista previa no divide tablas largas entre páginas, aunque **Repetir encabezado** exporta `w:tblHeader` para Word y LibreOffice. Las fusiones verticales complejas se simplifican. Las columnas se aproximan por bandas y los saltos continuos se tratan como salto de página. El ajuste de texto es cuadrado/superior-inferior, no contorno exacto. Las notas no reservan espacio en el flujo y los comentarios se consultan en un panel; las respuestas y el estado resuelto son locales. Los objetos OLE se muestran mediante su vista previa, no se ejecutan y su conservación depende del paquete. En `.doc` se importan encabezados e imágenes del flujo Data, pero las formas Escher, los cuadros de texto y la asociación exacta con su ancla siguen siendo limitados. La corrección ortográfica requiere el corrector de Windows (Windows 8 o posterior) y su idioma debe estar instalado.
 
 ## Motor tipográfico
 

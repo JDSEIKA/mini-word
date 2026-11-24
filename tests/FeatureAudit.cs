@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using WordPadClone.Controls;
 using WordPadClone.Formats;
@@ -167,6 +168,45 @@ internal static class P
         editor.ApplyParagraphStyle("Título 1");
         if (editor.Document.Paragraphs[0].StyleName != "Título 1")
             throw new Exception("named paragraph style");
+        DocumentModel mergeDoc = new DocumentModel();
+        Paragraph mergePara = new Paragraph();
+        mergePara.TableRows = new string[][] { new string[] { "A" }, new string[] { "" } };
+        mergePara.TableWidthTwips = 3000;
+        mergePara.EnsureTableCells();
+        TableCell mergeCell = mergePara.TableCells[0][0];
+        mergeCell.Runs.Clear();
+        mergeCell.Runs.Add(new TableCellRun("A", new RunFormat("Calibri", 22)));
+        mergeCell.SyncFromRuns();
+        mergeCell.RowSpan = 2;
+        mergePara.TableCells[1][0] = new TableCell { Covered = true };
+        mergeDoc.Paragraphs.Add(mergePara);
+        string mergePath = "tmp-regression/merge-audit.docx";
+        if (File.Exists(mergePath)) File.Delete(mergePath);
+        DocumentFormats.SaveDocx(mergePath, mergeDoc);
+        Dictionary<string, byte[]> mergePackage = ZipArchiveLite.Read(mergePath);
+        string mergeXml = Encoding.UTF8.GetString(mergePackage["word/document.xml"]);
+        int mergeTexts = mergeXml.Split(new string[] { ">A</w:t>" }, StringSplitOptions.None).Length - 1;
+        if (mergeTexts != 1) throw new Exception("vertical merge duplicate text");
+
+        Paragraph revisionParagraph = new Paragraph();
+        revisionParagraph.Inlines.Add(new TextInline("insertado", new RunFormat("Calibri", 22))
+        {
+            Revision = RevisionKind.Insert
+        });
+        if (!DocumentRevisions.AcceptAt(revisionParagraph, 0) || revisionParagraph.Inlines.Count == 0
+            || ((TextInline)revisionParagraph.Inlines[0]).Revision != RevisionKind.None)
+            throw new Exception("accept individual revision");
+
+        DocumentModel styleDoc = new DocumentModel();
+        Paragraph stylePara = new Paragraph();
+        stylePara.Inlines.Add(new TextInline("Estilo", new RunFormat("Calibri", 22)));
+        styleDoc.Paragraphs.Add(stylePara);
+        DocumentStyles.Apply(stylePara, "Título 1");
+        string stylePath = "tmp-regression/style-audit.docx";
+        if (File.Exists(stylePath)) File.Delete(stylePath);
+        DocumentFormats.SaveDocx(stylePath, styleDoc);
+        if (DocxFormat.Read(stylePath).Paragraphs[0].StyleName != "Título 1")
+            throw new Exception("style roundtrip");
         form.Close();
         Console.WriteLine("FEATURE_AUDIT=PASS");
     }

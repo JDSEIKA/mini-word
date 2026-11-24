@@ -645,6 +645,7 @@ namespace WordPadClone.Controls
 		public bool AcceptRevisionAtCaret()
 		{
 			if (_document == null || _caret.P < 0 || _caret.P >= _document.Paragraphs.Count) return false;
+			PushUndo();
 			bool changed = DocumentRevisions.AcceptAt(_document.Paragraphs[_caret.P], _caret.Offset);
 			if (!changed) return false;
 			InvalidateLayout(true);
@@ -656,6 +657,7 @@ namespace WordPadClone.Controls
 		public bool RejectRevisionAtCaret()
 		{
 			if (_document == null || _caret.P < 0 || _caret.P >= _document.Paragraphs.Count) return false;
+			PushUndo();
 			bool changed = DocumentRevisions.RejectAt(_document.Paragraphs[_caret.P], _caret.Offset);
 			if (!changed) return false;
 			InvalidateLayout(true);
@@ -731,6 +733,27 @@ namespace WordPadClone.Controls
 			AfterEdit();
 		}
 
+		private void AdjustTocOnInsert(int at)
+		{
+			if (_document == null) return;
+			for (int i = 0; i < _document.Paragraphs.Count; i++)
+			{
+				Paragraph p = _document.Paragraphs[i];
+				if (p.IsTocEntry && p.TocTargetParagraph >= at) p.TocTargetParagraph++;
+			}
+		}
+
+		private void AdjustTocOnRemove(int at)
+		{
+			if (_document == null) return;
+			for (int i = 0; i < _document.Paragraphs.Count; i++)
+			{
+				Paragraph p = _document.Paragraphs[i];
+				if (!p.IsTocEntry) continue;
+				if (p.TocTargetParagraph == at) p.TocTargetParagraph = -1;
+				else if (p.TocTargetParagraph > at) p.TocTargetParagraph--;
+			}
+		}
 		public bool InsertTableOfContents(int levels)
 		{
 			if (_document == null) return false;
@@ -4240,6 +4263,7 @@ namespace WordPadClone.Controls
 				paragraph.Inlines.AddRange(paragraph2.Inlines);
 				for (int num = end.P; num > start.P; num--)
 				{
+					AdjustTocOnRemove(num);
 					_document.Paragraphs.RemoveAt(num);
 				}
 			}
@@ -4460,6 +4484,7 @@ namespace WordPadClone.Controls
 			paragraph2.FloatingObjects.Clear();
 			paragraph2.Inlines.AddRange(list2);
 			paragraph2.PageBreakBefore = false;
+			AdjustTocOnInsert(paragraphIndex + 1);
 			_document.Paragraphs.Insert(paragraphIndex + 1, paragraph2);
 		}
 
@@ -4472,6 +4497,7 @@ namespace WordPadClone.Controls
 				paragraph.Inlines.AddRange(paragraph2.Inlines);
 				paragraph.FloatingObjects.AddRange(paragraph2.FloatingObjects);
 				paragraph2.FloatingObjects.Clear();
+				AdjustTocOnRemove(paragraphIndex + 1);
 				_document.Paragraphs.RemoveAt(paragraphIndex + 1);
 				MergeRuns(paragraph);
 			}
@@ -4960,6 +4986,7 @@ namespace WordPadClone.Controls
 				paragraph2.TableRows = CloneRows(rows);
 				paragraph2.TableCells = null;
 				paragraph2.TableWidthTwips = 9000;
+				AdjustTocOnInsert(p);
 				_document.Paragraphs.Insert(p, paragraph2);
 				_caret = new CaretPos(p + 1, 0);
 			}
@@ -5128,6 +5155,7 @@ namespace WordPadClone.Controls
 			if (paragraphIndex >= 0 && paragraphIndex < _document.Paragraphs.Count && _document.Paragraphs[paragraphIndex].TableRows != null)
 			{
 				PushUndo();
+				AdjustTocOnRemove(paragraphIndex);
 				_document.Paragraphs.RemoveAt(paragraphIndex);
 				if (_document.Paragraphs.Count == 0)
 				{
@@ -5428,7 +5456,6 @@ namespace WordPadClone.Controls
 			}
 			_cellEdit = cell;
 			cell.Cell.SyncFromRuns();
-			cell.Cell.Runs.Clear();
 			_cellEditParagraph = FindTableParagraph(cell);
 			_cellOriginalText = cell.Cell.Text ?? string.Empty;
 			PushUndo();
@@ -5718,7 +5745,6 @@ namespace WordPadClone.Controls
 				if (_cellEdit != null)
 				{
 					_cellEdit.Cell.Text = _cellEditor.Text;
-					_cellEdit.Cell.Runs.Clear();
 					if (_cellEditParagraph >= 0 && _cellEditParagraph < _document.Paragraphs.Count)
 					{
 						_document.Paragraphs[_cellEditParagraph].SyncTableRows();
@@ -7654,6 +7680,7 @@ namespace WordPadClone.Controls
 		{
 			int paragraph = TableAtCaret;
 			if (paragraph < 0) return false;
+			PushUndo();
 			_document.Paragraphs[paragraph].RepeatTableHeader = !_document.Paragraphs[paragraph].RepeatTableHeader;
 			InvalidateLayout(true);
 			OnTextChanged();
@@ -7663,6 +7690,7 @@ namespace WordPadClone.Controls
 		public bool ApplyParagraphStyle(string name)
 		{
 			if (_document == null || string.IsNullOrEmpty(name)) return false;
+			PushUndo();
 			CaretPos start, end;
 			NormalizeSelection(out start, out end);
 			for (int i = start.P; i <= end.P && i < _document.Paragraphs.Count; i++)
@@ -7695,6 +7723,7 @@ namespace WordPadClone.Controls
 				if (!p.Bullet && !p.Numbered) continue;
 				int level = p.Bullet ? p.BulletLevel : p.NumberLevel;
 				level = Math.Max(0, Math.Min(8, level + delta));
+				if (!changed) PushUndo();
 				if (p.Bullet) p.BulletLevel = level; else p.NumberLevel = level;
 				p.LeftIndentTwips = 720 * (level + 1);
 				p.FirstLineIndentTwips = -360;
@@ -7799,6 +7828,7 @@ namespace WordPadClone.Controls
 				paragraph.SpaceBeforeTwips = 0;
 				paragraph.SpaceAfterTwips = 0;
 				paragraph.Bullet = false;
+				AdjustTocOnInsert(p);
 				_document.Paragraphs.Insert(p, paragraph);
 				_document.Paragraphs[p + 1].PageBreakBefore = true;
 				_caret = new CaretPos(p + 1, 0);

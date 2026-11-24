@@ -920,7 +920,7 @@ namespace WordPadClone.Formats
             }
             w.WriteEndElement();
             w.WriteStartElement("w", "p", W.NamespaceName);
-            if (cell != null && cell.Runs.Count > 0)
+            if (!verticalContinue && cell != null && cell.Runs.Count > 0)
             {
                 for (int ri = 0; ri < cell.Runs.Count; ri++)
                 {
@@ -1012,7 +1012,8 @@ namespace WordPadClone.Formats
                 .Append(p.SpaceBeforeTwips).Append('|').Append(p.SpaceAfterTwips).Append('|')
                 .Append(p.LineSpacing).Append('|').Append(p.Bullet ? 1 : 0).Append('|')
                 .Append(p.BulletLevel).Append('|').Append(p.Numbered ? 1 : 0).Append('|')
-                .Append(p.NumberLevel).Append('|').Append(p.PageBreakBefore ? 1 : 0);
+                .Append(p.NumberLevel).Append('|').Append(p.PageBreakBefore ? 1 : 0)
+                .Append('|').Append(p.StyleName).Append('|').Append(p.RepeatTableHeader ? 1 : 0);
             for (int i = 0; i < p.Inlines.Count; i++)
             {
                 TextInline text = p.Inlines[i] as TextInline;

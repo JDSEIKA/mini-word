@@ -60,7 +60,7 @@ namespace WordPadClone
 
         public NativeEditorForm(string[] args)
         {
-            Text = "Mini Word 0.0.7 Beta";
+            Text = "Mini Word 0.0.8 Beta";
             AccessibleName = "Mini Word";
             AccessibleDescription = "Procesador de textos Mini Word";
             Font = new Font(FontResolver.Resolve("Segoe UI", "Español"), 9f);
@@ -941,7 +941,7 @@ namespace WordPadClone
         private void ShowAbout()
         {
             MessageBox.Show(this,
-                "Mini Word 0.0.7 Beta\nEditor nativo de documentos DOCX.\n"
+                "Mini Word 0.0.8 Beta\nEditor nativo de documentos DOCX.\n"
                 + "Motor tipográfico y de paginación propio.\n"
                 + "Secciones, columnas, objetos flotantes, notas, comentarios y estilos de tabla.",
                 "Acerca de Mini Word", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1380,7 +1380,7 @@ namespace WordPadClone
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(_path) ? "Sin título" : Path.GetFileName(_path);
-            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.7 Beta" : name + " - Mini Word 0.0.7 Beta") + (_dirty ? " *" : "");
+            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.8 Beta" : name + " - Mini Word 0.0.8 Beta") + (_dirty ? " *" : "");
         }
 
         private void NewDocument()

@@ -1,7 +1,9 @@
 # Mini Word — alcance de beta
 
-Versión de evaluación: 0.0.7 Beta
+Versión de evaluación: 0.0.8 Beta
 Fecha: 2026-11-15
+
+> **Actualización 0.0.8:** campos simples, índice, control de cambios, comparación, estilos y comentarios con respuestas están implementados. Los campos/TOC complejos de Word siguen siendo parciales.
 
 ## Qué incluye esta beta
 
@@ -20,7 +22,7 @@ Fecha: 2026-11-15
 
 - No es un sustituto completo de Microsoft Word.
 - No ejecuta macros, controles ActiveX, OLE ni contenido remoto.
-- No conserva necesariamente temas, índices, TOC, campos complejos, gráficos, SmartArt, ecuaciones o revisiones.
+- Conserva y modela campos simples, índice estático, control de cambios por tramo y revisiones; no garantiza campos/TOC complejos, temas, gráficos, SmartArt ni ecuaciones.
 - No guarda `.doc`; solo lo importa.
 - No incluye instalador firmado ni actualizaciones automáticas.
 - No sustituye una revisión visual en Word/LibreOffice de documentos críticos.

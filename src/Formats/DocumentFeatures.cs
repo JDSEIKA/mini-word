@@ -588,13 +588,13 @@ namespace WordPadClone.Formats
             p.KeepWithNext = source.KeepWithNext;
             p.WidowControl = source.WidowControl;
             p.TabStopsTwips = source.TabStopsTwips == null ? new int[0] : (int[])source.TabStopsTwips.Clone();
-            p.TableRows = source.TableRows;
+            p.TableRows = CloneRows(source.TableRows);
             p.TableWidthTwips = source.TableWidthTwips;
             p.TableStyleName = source.TableStyleName;
             p.TableShading = source.TableShading;
             p.TableBorderColor = source.TableBorderColor;
             p.TableBorderSize = source.TableBorderSize;
-            p.TableCells = source.TableCells;
+            p.TableCells = CloneCells(source.TableCells);
             for (int i = 0; i < source.Inlines.Count; i++)
             {
                 TextInline t = source.Inlines[i] as TextInline;
@@ -614,6 +614,30 @@ namespace WordPadClone.Formats
             return p;
         }
 
+        private static string[][] CloneRows(string[][] rows)
+        {
+            if (rows == null) return null;
+            string[][] copy = new string[rows.Length][];
+            for (int r = 0; r < rows.Length; r++)
+            {
+                copy[r] = rows[r] == null ? null : (string[])rows[r].Clone();
+            }
+            return copy;
+        }
+
+        private static TableCell[][] CloneCells(TableCell[][] cells)
+        {
+            if (cells == null) return null;
+            TableCell[][] copy = new TableCell[cells.Length][];
+            for (int r = 0; r < cells.Length; r++)
+            {
+                if (cells[r] == null) continue;
+                copy[r] = new TableCell[cells[r].Length];
+                for (int c = 0; c < cells[r].Length; c++)
+                    if (cells[r][c] != null) copy[r][c] = cells[r][c].Clone();
+            }
+            return copy;
+        }
         private static void CopyDocumentProperties(DocumentModel source, DocumentModel target)
         {
             target.PageWidthTwips = source.PageWidthTwips;
