@@ -2210,9 +2210,40 @@ namespace WordPadClone.Formats
                     || path.EndsWith("/vbaData.xml", StringComparison.OrdinalIgnoreCase)
                     || path.EndsWith("/vbaProjectSignature.bin", StringComparison.OrdinalIgnoreCase))
                     continue;
-                total += entry.Value.Length;
+                byte[] preservedBytes = entry.Value;
+                if (path.EndsWith(".rels", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        XDocument relDoc = LoadXml(preservedBytes);
+                        if (relDoc.Root != null)
+                        {
+                            List<XElement> external = new List<XElement>();
+                            foreach (XElement rel in relDoc.Root.Elements(REL + "Relationship"))
+                            {
+                                string mode = (string)rel.Attribute("TargetMode");
+                                if (string.Equals(mode, "External", StringComparison.OrdinalIgnoreCase))
+                                    external.Add(rel);
+                            }
+                            for (int i = 0; i < external.Count; i++) external[i].Remove();
+                            if (external.Count > 0)
+                            {
+                                using (MemoryStream sanitized = new MemoryStream())
+                                {
+                                    relDoc.Save(sanitized);
+                                    preservedBytes = sanitized.ToArray();
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+                total += preservedBytes.Length;
                 if (total > 32L * 1024 * 1024) break;
-                model.PreservedParts[path] = entry.Value;
+                model.PreservedParts[path] = preservedBytes;
             }
             PreserveContentTypes(zip, model);
             PreserveRelationships(zip, model);

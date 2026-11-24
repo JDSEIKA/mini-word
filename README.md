@@ -2,7 +2,7 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **454 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **456 KB** y solo depende de .NET Framework 4.0 o posterior.
 
 Versión: **0.0.9 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
@@ -10,8 +10,8 @@ Versión: **0.0.9 Beta**. Estado: **beta pública inicial**. El alcance y las li
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 454 KB
-- SHA-256: 0C90C041EDEB315EC7AE10BA92A67EA99DA91DAB1A25493F436ABD0D1C926732
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 456 KB
+- SHA-256: 1CE355FDA77B1423322D703D14B55A76A128AF49E025888FC783D32419130997
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
@@ -94,6 +94,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Auditoría RichEdit: [`docs/AUDITORIA_RICHEDIT.md`](docs/AUDITORIA_RICHEDIT.md).
 - Dictado y lectura en voz alta: [`docs/VOZ_DICTADO.md`](docs/VOZ_DICTADO.md).
 - Accesibilidad de comandos: [`docs/ACCESIBILIDAD_FUNCIONES.md`](docs/ACCESIBILIDAD_FUNCIONES.md).
+- Re-auditoría 0.0.9: [`docs/REAUDITORIA_0.0.9.md`](docs/REAUDITORIA_0.0.9.md).
 - Auditoría de remediación 0.0.9: [`docs/AUDITORIA_0.0.9.md`](docs/AUDITORIA_0.0.9.md).
 - Auditoría estricta 2026-11-23: [`docs/AUDITORIA_2026-11-23.md`](docs/AUDITORIA_2026-11-23.md).
 - Auditoría de seguridad y recuento consolidado: [`docs/FALLOS_2026-11-18.md`](docs/FALLOS_2026-11-18.md).

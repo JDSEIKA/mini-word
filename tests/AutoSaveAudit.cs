@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
@@ -27,6 +27,11 @@ internal static class P
             if (after.Length != 5 || after[0] != 1) throw new Exception("autosave modified original");
             if (Directory.GetFiles(recoveryRoot, "recovery-*.docx").Length == 0)
                 throw new Exception("autosave recovery missing");
+            type.GetField("_autoSaveEnabled", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(form, false);
+            type.GetField("_dirty", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(form, true);
+            type.GetMethod("AutoSaveNow", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(form, null);
+            if (Directory.GetFiles(recoveryRoot, "recovery-*.docx").Length == 0)
+                throw new Exception("recovery missing when autosave disabled");
             Console.WriteLine("AUTOSAVE_AUDIT=PASS");
         }
         finally
