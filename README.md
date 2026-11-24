@@ -2,7 +2,7 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **451 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **452 KB** y solo depende de .NET Framework 4.0 o posterior.
 
 Versión: **0.0.6 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
@@ -10,8 +10,8 @@ Versión: **0.0.6 Beta**. Estado: **beta pública inicial**. El alcance y las li
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 451 KB
-- SHA-256: 13B1DAFB81C9ADFBF078408A6B9BA7768F449791A3D1E4016A636F42CC0B3DA1
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 452 KB
+- SHA-256: A076A41270D48775A07ED3FD9CE02C1545A1D529E391B4C3C8C90B030199BA03
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 

@@ -7453,6 +7453,7 @@ namespace WordPadClone.Controls
 			{
 				PushUndo();
 				_cellEdit.Cell.LinkUrl = target;
+				for (int i = 0; i < _cellEdit.Cell.Runs.Count; i++) _cellEdit.Cell.Runs[i].LinkUrl = target;
 				InvalidateLayout(true);
 				OnTextChanged();
 				return true;
@@ -7473,7 +7474,12 @@ namespace WordPadClone.Controls
 					{
 						if (table.TableCells[r] == null) continue;
 						for (int c = firstColumn; c <= lastColumn && c < table.TableCells[r].Length; c++)
-							if (table.TableCells[r][c] != null) table.TableCells[r][c].LinkUrl = target;
+							if (table.TableCells[r][c] != null)
+							{
+								table.TableCells[r][c].LinkUrl = target;
+								for (int ri = 0; ri < table.TableCells[r][c].Runs.Count; ri++)
+									table.TableCells[r][c].Runs[ri].LinkUrl = target;
+							}
 					}
 					InvalidateLayout(true);
 					OnTextChanged();
