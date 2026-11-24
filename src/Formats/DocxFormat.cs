@@ -2174,9 +2174,9 @@ namespace WordPadClone.Formats
             foreach (string key in zip.Keys)
             {
                 string path = key.Replace('\\', '/');
-                if (path.StartsWith("word/vbaProject.bin", StringComparison.OrdinalIgnoreCase)
-                    || path.StartsWith("word/vbaData.xml", StringComparison.OrdinalIgnoreCase)
-                    || path.StartsWith("word/vbaProjectSignature.bin", StringComparison.OrdinalIgnoreCase))
+                if (path.IndexOf("/vbaProject.bin", StringComparison.OrdinalIgnoreCase) >= 0
+                    || path.IndexOf("/vbaData.xml", StringComparison.OrdinalIgnoreCase) >= 0
+                    || path.IndexOf("/vbaProjectSignature.bin", StringComparison.OrdinalIgnoreCase) >= 0)
                     vba = true;
                 if (path.StartsWith("word/activeX/", StringComparison.OrdinalIgnoreCase))
                     activeX = true;
@@ -2206,6 +2206,10 @@ namespace WordPadClone.Formats
                     || path.StartsWith("customXml/", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(path, "word/fontTable.xml", StringComparison.OrdinalIgnoreCase);
                 if (!keep) continue;
+                if (path.EndsWith("/vbaProject.bin", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith("/vbaData.xml", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith("/vbaProjectSignature.bin", StringComparison.OrdinalIgnoreCase))
+                    continue;
                 total += entry.Value.Length;
                 if (total > 32L * 1024 * 1024) break;
                 model.PreservedParts[path] = entry.Value;
@@ -2289,8 +2293,9 @@ namespace WordPadClone.Formats
                     bool external = string.Equals(mode, "External", StringComparison.OrdinalIgnoreCase);
                     if (external && typeKey.IndexOf("hyperlink", StringComparison.Ordinal) < 0)
                     {
-                        string warning = "El documento contiene relaciones externas que no se descargan.";
+                        string warning = "El documento contiene relaciones externas que no se descargan y se descartan.";
                         if (!model.SecurityWarnings.Contains(warning)) model.SecurityWarnings.Add(warning);
+                        continue;
                     }
                     string normalized = target;
                     if (!external)
@@ -2634,7 +2639,7 @@ namespace WordPadClone.Formats
 
                 List<SectionMark> marks = new List<SectionMark>();
                 foreach (XElement child in body.Elements())
-                    ReadBlock(child, model, marks);
+                    ReadBlock(child, model, marks, 0);
 
                 if (model.Paragraphs.Count == 0)
                     model.Paragraphs.Add(new Paragraph());
@@ -2650,8 +2655,12 @@ namespace WordPadClone.Formats
                 public XElement Properties;
             }
 
-            private void ReadBlock(XElement child, DocumentModel model, List<SectionMark> marks)
+            private const int MaxXmlDepth = 128;
+
+            private void ReadBlock(XElement child, DocumentModel model, List<SectionMark> marks, int depth)
             {
+                if (depth > MaxXmlDepth)
+                    throw new InvalidDataException("El DOCX contiene un anidamiento XML excesivo.");
                 if (child.Name == W + "p")
                 {
                     model.Paragraphs.Add(ReadParagraph(child));
@@ -2677,7 +2686,7 @@ namespace WordPadClone.Formats
                 {
                     XElement content = child.Element(W + "sdtContent");
                     if (content == null) content = child;
-                    foreach (XElement inner in content.Elements()) ReadBlock(inner, model, marks);
+                    foreach (XElement inner in content.Elements()) ReadBlock(inner, model, marks, depth + 1);
                 }
             }
 
@@ -2834,12 +2843,14 @@ namespace WordPadClone.Formats
 
             private void ReadInlines(XElement parent, Paragraph p, RunFormat baseRun, string paragraphStyle)
             {
-                ReadInlines(parent, p, baseRun, paragraphStyle, RevisionKind.None, string.Empty, string.Empty);
+                ReadInlines(parent, p, baseRun, paragraphStyle, RevisionKind.None, string.Empty, string.Empty, 0);
             }
 
             private void ReadInlines(XElement parent, Paragraph p, RunFormat baseRun, string paragraphStyle,
-                RevisionKind revision, string author, string date)
+                RevisionKind revision, string author, string date, int depth)
             {
+                if (depth > MaxXmlDepth)
+                    throw new InvalidDataException("El DOCX contiene un anidamiento XML excesivo.");
                 foreach (XElement child in parent.Elements())
                 {
                     if (child.Name == W + "r")
@@ -2860,13 +2871,13 @@ namespace WordPadClone.Formats
                     {
                         ReadInlines(child, p, baseRun, paragraphStyle, RevisionKind.Insert,
                             (string)child.Attribute(W + "author") ?? "Autor",
-                            (string)child.Attribute(W + "date") ?? string.Empty);
+                            (string)child.Attribute(W + "date") ?? string.Empty, depth + 1);
                     }
                     else if (child.Name == W + "del" || child.Name == W + "moveFrom")
                     {
                         ReadInlines(child, p, baseRun, paragraphStyle, RevisionKind.Delete,
                             (string)child.Attribute(W + "author") ?? "Autor",
-                            (string)child.Attribute(W + "date") ?? string.Empty);
+                            (string)child.Attribute(W + "date") ?? string.Empty, depth + 1);
                     }
                     else if (child.Name == W + "fldSimple")
                     {
@@ -2882,13 +2893,13 @@ namespace WordPadClone.Formats
                         }
                         else
                         {
-                            ReadInlines(child, p, baseRun, paragraphStyle, revision, author, date);
+                            ReadInlines(child, p, baseRun, paragraphStyle, revision, author, date, depth + 1);
                         }
                     }
                     else if (child.Name == W + "smartTag" || child.Name == W + "sdt"
                         || child.Name == W + "sdtContent")
                     {
-                        ReadInlines(child, p, baseRun, paragraphStyle, revision, author, date);
+                        ReadInlines(child, p, baseRun, paragraphStyle, revision, author, date, depth + 1);
                     }
                     else if (child.Name == W + "bookmarkStart" || child.Name == W + "bookmarkEnd"
                         || child.Name == W + "proofErr" || child.Name == W + "commentRangeStart"
@@ -3494,12 +3505,14 @@ namespace WordPadClone.Formats
             {
                 List<List<TableCell>> cells = new List<List<TableCell>>();
                 bool repeatHeader = false;
+                int rowIndex = 0;
                 int columns = 0;
                 foreach (XElement row in table.Descendants(W + "tr"))
                 {
                     if (row.Ancestors(W + "tbl").FirstOrDefault() != table) continue;
                     XElement rowProps = row.Element(W + "trPr");
-                    if (rowProps != null && rowProps.Element(W + "tblHeader") != null) repeatHeader = true;
+                    if (rowIndex == 0 && rowProps != null && rowProps.Element(W + "tblHeader") != null)
+                        repeatHeader = true;
                     List<TableCell> rowCells = new List<TableCell>();
                     int column = 0;
                     foreach (XElement tc in row.Elements(W + "tc"))
@@ -3578,6 +3591,7 @@ namespace WordPadClone.Formats
                     }
                     if (rowCells.Count > columns) columns = rowCells.Count;
                     cells.Add(rowCells);
+                    rowIndex++;
                 }
                 if (cells.Count == 0) return;
 

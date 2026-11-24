@@ -42,9 +42,23 @@ namespace WordPadClone.Util
                         if (replaceError is IOException || replaceError is PlatformNotSupportedException
                             || replaceError is UnauthorizedAccessException)
                         {
+                            // En carpetas sincronizadas o con antivirus, File.Replace
+                            // puede fallar.  No se copia el temporal sobre el original:
+                            // se aparta el original y se restaura si el intercambio falla.
+                            string displaced = full + ".swap." + Guid.NewGuid().ToString("N");
                             File.Copy(full, backup, true);
-                            File.Copy(temporary, full, true);
-                            File.Delete(temporary);
+                            File.Move(full, displaced);
+                            try
+                            {
+                                File.Move(temporary, full);
+                            }
+                            catch
+                            {
+                                if (!File.Exists(full) && File.Exists(displaced))
+                                    File.Move(displaced, full);
+                                throw;
+                            }
+                            try { File.Delete(displaced); } catch { }
                         }
                         else
                         {

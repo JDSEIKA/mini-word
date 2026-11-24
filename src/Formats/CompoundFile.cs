@@ -76,34 +76,47 @@ namespace WordPadClone.Formats
             uint numFat = ReadU32(data, 44);
 
             if (miniCutoff <= 0) miniCutoff = 4096;
+            int fatLimit = Math.Max(1, data.Length / sectorSize + 1);
+            if (numFat > fatLimit || numDifat > fatLimit || numMiniFat > fatLimit)
+                throw new InvalidDataException("Los contadores FAT/DIFAT no son validos.");
 
             List<uint> fatSectors = new List<uint>();
+            HashSet<uint> fatSectorSeen = new HashSet<uint>();
             for (int i = 0; i < 109; i++)
             {
                 uint sector = ReadU32(data, 76 + i * 4);
-                if (sector != FreeSector && sector != EndOfChain) fatSectors.Add(sector);
+                if (sector != FreeSector && sector != EndOfChain && fatSectorSeen.Add(sector))
+                    fatSectors.Add(sector);
             }
 
-            // Follow the DIFAT chain, when present.  The last entry of each
-            // DIFAT sector points at the next DIFAT sector.
             uint difat = firstDifat;
-            int guard = 0;
-            while (difat != EndOfChain && difat != FreeSector && guard++ < 100000)
+            HashSet<uint> difatSeen = new HashSet<uint>();
+            int difatCount = 0;
+            while (difat != EndOfChain && difat != FreeSector)
             {
+                if (!difatSeen.Add(difat))
+                    throw new InvalidDataException("Ciclo en la cadena DIFAT.");
+                if (numDifat > 0 && ++difatCount > numDifat)
+                    throw new InvalidDataException("La cadena DIFAT excede su contador.");
                 long off = SectorOffset(difat, sectorSize);
-                if (!InRange(data, off, sectorSize)) break;
+                if (!InRange(data, off, sectorSize))
+                    throw new InvalidDataException("Sector DIFAT fuera del archivo.");
                 int slots = sectorSize / 4;
                 for (int i = 0; i < slots - 1; i++)
                 {
                     uint sector = ReadU32(data, (int)off + i * 4);
-                    if (sector != FreeSector && sector != EndOfChain) fatSectors.Add(sector);
+                    if (sector != FreeSector && sector != EndOfChain && fatSectorSeen.Add(sector))
+                    {
+                        fatSectors.Add(sector);
+                        if (fatSectors.Count > fatLimit)
+                            throw new InvalidDataException("Tabla FAT no valida.");
+                    }
                 }
                 difat = ReadU32(data, (int)off + (slots - 1) * 4);
             }
 
             List<uint> fatValues = new List<uint>();
-            int fatLimit = Math.Max(1, data.Length / sectorSize + 1);
-            if (fatSectors.Count > fatLimit) throw new InvalidDataException("Tabla FAT no válida.");
+            if (fatSectors.Count == 0) throw new InvalidDataException("No se pudo leer la tabla FAT.");
             for (int i = 0; i < fatSectors.Count; i++)
             {
                 long off = SectorOffset(fatSectors[i], sectorSize);
@@ -111,7 +124,6 @@ namespace WordPadClone.Formats
                 for (int j = 0; j < sectorSize; j += 4)
                     fatValues.Add(ReadU32(data, (int)off + j));
             }
-            if (numFat > 0 && fatValues.Count == 0) throw new InvalidDataException("No se pudo leer la tabla FAT.");
             uint[] fat = fatValues.ToArray();
 
             uint[] miniFat = new uint[0];
@@ -119,14 +131,19 @@ namespace WordPadClone.Formats
             {
                 List<uint> mini = new List<uint>();
                 uint sector = firstMiniFat;
-                int seen = 0;
-                while (sector != EndOfChain && sector != FreeSector && seen++ < fatLimit)
+                HashSet<uint> miniSeen = new HashSet<uint>();
+                while (sector != EndOfChain && sector != FreeSector)
                 {
+                    if (!miniSeen.Add(sector))
+                        throw new InvalidDataException("Ciclo en la cadena MiniFAT.");
                     long off = SectorOffset(sector, sectorSize);
-                    if (!InRange(data, off, sectorSize)) break;
+                    if (!InRange(data, off, sectorSize))
+                        throw new InvalidDataException("Sector MiniFAT fuera del archivo.");
                     for (int j = 0; j < sectorSize; j += 4)
                         mini.Add(ReadU32(data, (int)off + j));
                     sector = NextSector(fat, sector);
+                    if (mini.Count > fatLimit * (sectorSize / 4))
+                        throw new InvalidDataException("Tabla MiniFAT no valida.");
                 }
                 miniFat = mini.ToArray();
             }
@@ -180,13 +197,16 @@ namespace WordPadClone.Formats
             Entry entry;
             if (!_entries.TryGetValue(name, out entry) || entry.Type != 2)
                 throw new InvalidDataException("No se encontró el flujo '" + name + "' en el documento.");
-            if (entry.Size < 0 || entry.Size > int.MaxValue) throw new InvalidDataException("Flujo OLE2 demasiado grande.");
+            if (entry.Size < 0 || entry.Size > int.MaxValue || entry.Size > _data.Length)
+                throw new InvalidDataException("Flujo OLE2 demasiado grande.");
             int size = (int)entry.Size;
 
             if (size < _miniCutoff)
             {
                 Entry root;
                 if (!_entries.TryGetValue("Root Entry", out root)) throw new InvalidDataException("Falta el almacén raíz OLE2.");
+                if (root.Size < 0 || root.Size > _data.Length || root.Size > int.MaxValue)
+                    throw new InvalidDataException("El almacen raiz OLE2 tiene un tamano no valido.");
                 byte[] miniStream = ReadNormalStream(_data, _fat, root.StartSector, _sectorSize, (int)root.Size);
                 if (entry.StartSector == EndOfChain || entry.StartSector == FreeSector)
                     return new byte[0];
@@ -216,12 +236,18 @@ namespace WordPadClone.Formats
         {
             if (start == EndOfChain || start == FreeSector) return new byte[0];
             List<byte[]> blocks = new List<byte[]>();
+            HashSet<uint> visited = new HashSet<uint>();
             int total = 0;
             uint sector = start;
-            int guard = 0;
-            int maxSectors = fat.Length + 1;
-            while (sector != EndOfChain && sector != FreeSector && guard++ < maxSectors)
+            int maxBytes = requested >= 0 ? Math.Min(requested, data.Length) : data.Length;
+            while (sector != EndOfChain && sector != FreeSector)
             {
+                if (!visited.Add(sector))
+                    throw new InvalidDataException("Ciclo en la cadena FAT.");
+                if (total >= maxBytes)
+                    break;
+                if (total + sectorSize > data.Length)
+                    break;
                 long off = SectorOffset(sector, sectorSize);
                 if (!InRange(data, off, sectorSize)) break;
                 byte[] block = new byte[sectorSize];

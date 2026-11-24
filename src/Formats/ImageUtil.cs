@@ -27,10 +27,10 @@ namespace WordPadClone.Formats
             try
             {
                 Image img = Image.FromStream(ms);
-                if ((long)img.Width * img.Height > 50000000L)
+                if ((long)img.Width * img.Height > 25000000L)
                 {
                     img.Dispose();
-                    throw new InvalidDataException("La imagen supera el límite de 50 megapíxeles.");
+                    throw new InvalidDataException("La imagen supera el límite de 25 megapíxeles.");
                 }
                 return img;
             }
@@ -52,6 +52,13 @@ namespace WordPadClone.Formats
             }
             int w = Math.Max(1, Math.Min(10000, wTwips / 15));
             int h = Math.Max(1, Math.Min(10000, hTwips / 15));
+            long pixels = (long)w * h;
+            if (pixels > 25000000L)
+            {
+                double scale = Math.Sqrt(25000000.0 / pixels);
+                w = Math.Max(1, (int)(w * scale));
+                h = Math.Max(1, (int)(h * scale));
+            }
 
             using (Image source = LoadImage(inline.Data, inline.Extension, inline.WidthTwips, inline.HeightTwips))
             {
@@ -108,6 +115,7 @@ namespace WordPadClone.Formats
             {
                 width = ReadBigEndianInt(data, 16);
                 height = ReadBigEndianInt(data, 20);
+                if (width <= 0 || height <= 0) throw new InvalidDataException("El PNG tiene dimensiones no validas.");
             }
             else if (data.Length >= 10 && data[0] == 'G' && data[1] == 'I' && data[2] == 'F')
             {
@@ -116,8 +124,13 @@ namespace WordPadClone.Formats
             }
             else if (data.Length >= 26 && data[0] == 'B' && data[1] == 'M')
             {
-                width = Math.Abs(BitConverter.ToInt32(data, 18));
-                height = Math.Abs(BitConverter.ToInt32(data, 22));
+                int rawWidth = BitConverter.ToInt32(data, 18);
+                int rawHeight = BitConverter.ToInt32(data, 22);
+                if (rawWidth == int.MinValue || rawHeight == int.MinValue)
+                    throw new InvalidDataException("El BMP tiene dimensiones no validas.");
+                width = Math.Abs(rawWidth);
+                height = Math.Abs(rawHeight);
+                if (width <= 0 || height <= 0) throw new InvalidDataException("El BMP tiene dimensiones no validas.");
             }
             else if (data.Length >= 4 && data[0] == 0xFF && data[1] == 0xD8)
             {
@@ -147,8 +160,8 @@ namespace WordPadClone.Formats
                     pos += length;
                 }
             }
-            if (width > 0 && height > 0 && (long)width * height > 50000000L)
-                throw new InvalidDataException("La imagen codificada supera el límite de 50 megapíxeles.");
+            if (width > 0 && height > 0 && (long)width * height > 25000000L)
+                throw new InvalidDataException("La imagen codificada supera el límite de 25 megapíxeles.");
             if (width > 20000 || height > 20000)
                 throw new InvalidDataException("La imagen tiene dimensiones demasiado grandes.");
         }

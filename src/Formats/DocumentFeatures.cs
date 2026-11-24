@@ -531,7 +531,7 @@ namespace WordPadClone.Formats
             {
                 int n = Math.Min(a.Length, b.Length);
                 for (int i = 0; i < n; i++)
-                    ops.Add(new int[] { string.Equals(a[i], b[i], StringComparison.Ordinal) ? 0 : 0, i, i });
+                    ops.Add(new int[] { 0, i, i });
                 for (int i = n; i < a.Length; i++) ops.Add(new int[] { 1, i, -1 });
                 for (int i = n; i < b.Length; i++) ops.Add(new int[] { 2, -1, i });
                 return ops;

@@ -2,26 +2,26 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **452 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **454 KB** y solo depende de .NET Framework 4.0 o posterior.
 
-Versión: **0.0.8 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
+Versión: **0.0.9 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
 ## Ejecutable incluido en el repositorio
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 452 KB
-- SHA-256: 5070A073C2A86C6848F4853F1F360DB2AE84FAD2C01AD9EF9D0B951BD43E760D
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 454 KB
+- SHA-256: 0C90C041EDEB315EC7AE10BA92A67EA99DA91DAB1A25493F436ABD0D1C926732
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
 ## Probar y reportar errores
 
-La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.8-beta).
+La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.9-beta).
 
-- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.8-beta/MiniWord.exe)
-- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.8-beta/MiniWord-Beta.zip)
-- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.8-beta/MiniWord-Installer.zip)
+- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.9-beta/MiniWord.exe)
+- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.9-beta/MiniWord-Beta.zip)
+- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.9-beta/MiniWord-Installer.zip)
 
 Para reportar un fallo usa el [formulario de error](https://github.com/JDSEIKA/mini-word/issues/new?template=bug_report.yml). Incluye un DOCX mínimo sin datos privados, la versión de Windows y los pasos exactos. Más detalles en [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -55,7 +55,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - **Imágenes**: inserción desde archivo como objeto flotante, ancho máximo de 2/3 de la página calculado antes de importar, relación de aspecto bloqueada, selección con clic, ocho tiradores para redimensionar y arrastre directo para recolocarlas en la hoja.
 - **Cuadros de texto y formas**: se insertan seleccionados, con ocho tiradores para redimensionar y arrastre para moverlos; el doble clic o **Formato de texto** permite editar fuente, tamaño, negrita, cursiva, subrayado y color. El selector gráfico permite rectángulo, círculo, triángulo, estrella, flecha derecha, flecha izquierda, rombo y corazón. Color de forma permite cambiar relleno, contorno y grosor.
 - **Fecha**: inserta la fecha actual con el formato largo del idioma de Windows.
-- **Autoguardado opcional**: el botón Autoguardado abre un diálogo para activarlo/desactivarlo y elegir el intervalo de 1 a 120 minutos; se guarda en el documento o en una copia de recuperación.
+- **Autoguardado opcional**: el botón Autoguardado abre un diálogo para activarlo/desactivarlo y elegir el intervalo de 1 a 120 minutos; el autoguardado escribe siempre una copia de recuperación y nunca sobrescribe el documento original. El guardado manual sí actualiza el archivo y conserva `.bak`.
 - **Recuperación automática**: si la aplicación se cierra inesperadamente, al iniciar ofrece recuperar el último autoguardado y conserva la ruta original.
 - **Aviso de compatibilidad**: si el documento contiene campos, TOC, controles de contenido, revisiones o gráficos no modelados, se avisa antes de guardar y se conserva el original en `.bak`.
 - **Guardado atómico**: cada guardado escribe un temporal, sustituye el original y conserva una copia `.bak`; los paquetes ZIP, XML e imágenes tienen límites de tamaño.
@@ -76,7 +76,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Encabezados y pies editables con `{PAGE}` y `{NUMPAGES}`; se guardan en DOCX y se dibujan en pantalla, impresión y vista previa.
 - Crear página con `Ctrl+Enter`, saltos de página, buscar/reemplazar, deshacer/rehacer, cortar/copiar/pegar e impresión.
 - **Compatibilidad de objetos**: formas y cuadros de texto se exportan como VML para Word 2007/2010+ y LibreOffice; las imágenes flotantes usan anclas relativas a página. Esto evita que cambien de página al abrirlas.
-- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con `Ctrl+Click` se muestra el destino y se pide autorización antes de abrirlo. El botón **Hipervínculo** permite crear o editar enlaces; las celdas de tabla admiten enlaces por celda y por tramo, y al hacer clic se abre solo el tramo enlazado.
+- **Hipervínculos**: el texto con URL se dibuja en azul y subrayado, incluso si el formato original era negro. Con un clic (o `Ctrl+clic`) se muestra el destino y se pide autorización antes de abrirlo. El botón **Hipervínculo** permite crear o editar enlaces; las celdas de tabla admiten enlaces por celda y por tramo, y al hacer clic se abre solo el tramo enlazado.
 - **Orden Z y rotación**: **Traer al frente**, **Enviar al fondo** y **Rotar 90°** para formas, imágenes y cuadros de texto.
 - **Archivo → Recientes**: lista desplegable con los últimos 5 documentos abiertos o guardados.
 - **Apertura segura**: rechazo de ZIP anidados malformados, bombas de descompresión, rutas `../`, entradas duplicadas, DTD/entidades XML, RTF excesivamente anidado y BOM inválidos. Macros VBA, ActiveX y scripts ODT se avisan y no se ejecutan.
@@ -94,6 +94,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Auditoría RichEdit: [`docs/AUDITORIA_RICHEDIT.md`](docs/AUDITORIA_RICHEDIT.md).
 - Dictado y lectura en voz alta: [`docs/VOZ_DICTADO.md`](docs/VOZ_DICTADO.md).
 - Accesibilidad de comandos: [`docs/ACCESIBILIDAD_FUNCIONES.md`](docs/ACCESIBILIDAD_FUNCIONES.md).
+- Auditoría de remediación 0.0.9: [`docs/AUDITORIA_0.0.9.md`](docs/AUDITORIA_0.0.9.md).
 - Auditoría estricta 2026-11-23: [`docs/AUDITORIA_2026-11-23.md`](docs/AUDITORIA_2026-11-23.md).
 - Auditoría de seguridad y recuento consolidado: [`docs/FALLOS_2026-11-18.md`](docs/FALLOS_2026-11-18.md).
 

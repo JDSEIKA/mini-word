@@ -232,10 +232,10 @@ namespace WordPadClone.Formats
                 pos += 46 + nameLen + extraLen + commentLen;
 
                 if (uncompSize > 64 * 1024 * 1024)
-                    throw new InvalidDataException("Una entrada del ZIP supera el límite de 128 MB.");
+                    throw new InvalidDataException("Una entrada del ZIP supera el límite de 64 MB.");
                 total += uncompSize;
                 if (total > 128 * 1024 * 1024)
-                    throw new InvalidDataException("El contenido del ZIP supera el límite de 256 MB.");
+                    throw new InvalidDataException("El contenido del ZIP supera el límite de 128 MB.");
 
                 if ((long)localOffset + 30 > all.Length || BitConverter.ToUInt32(all, (int)localOffset) != LocalSig)
                     throw new InvalidDataException("Cabecera local ZIP dañada.");

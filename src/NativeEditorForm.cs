@@ -5,6 +5,7 @@ using System.Drawing.Text;
 using System.Globalization;
 using System.Drawing.Printing;
 using System.IO;
+using Mutex = System.Threading.Mutex;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using WordPadClone.Controls;
@@ -57,10 +58,15 @@ namespace WordPadClone
         private RibbonGroup _recentGroup;
         private string _recoveryPath;
         private bool _lossWarningAccepted;
+        private static Mutex _recoveryMutex;
+        private bool _ownsRecoveryMutex;
 
         public NativeEditorForm(string[] args)
         {
-            Text = "Mini Word 0.0.8 Beta";
+            _recoveryMutex = new Mutex(false, "Local\\MiniWord.Recovery");
+            try { _ownsRecoveryMutex = _recoveryMutex.WaitOne(0, false); }
+            catch (System.Threading.AbandonedMutexException) { _ownsRecoveryMutex = true; }
+            Text = "Mini Word 0.0.9 Beta";
             AccessibleName = "Mini Word";
             AccessibleDescription = "Procesador de textos Mini Word";
             Font = new Font(FontResolver.Resolve("Segoe UI", "Español"), 9f);
@@ -941,7 +947,7 @@ namespace WordPadClone
         private void ShowAbout()
         {
             MessageBox.Show(this,
-                "Mini Word 0.0.8 Beta\nEditor nativo de documentos DOCX.\n"
+                "Mini Word 0.0.9 Beta\nEditor nativo de documentos DOCX.\n"
                 + "Motor tipográfico y de paginación propio.\n"
                 + "Secciones, columnas, objetos flotantes, notas, comentarios y estilos de tabla.",
                 "Acerca de Mini Word", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1215,7 +1221,11 @@ namespace WordPadClone
             get
             {
                 string overridden = Environment.GetEnvironmentVariable("MINIWORD_RECOVERY_DIR");
-                if (!string.IsNullOrEmpty(overridden)) return overridden;
+                if (!string.IsNullOrEmpty(overridden))
+                {
+                    try { return Path.GetFullPath(overridden); }
+                    catch { }
+                }
                 return Path.Combine(Path.GetTempPath(), "MiniWord", "Recovery");
             }
         }
@@ -1262,37 +1272,29 @@ namespace WordPadClone
             }
         }
 
-        private void ClearAllRecoveryFiles()
+        private void QuarantineRecoveryFile(string document)
         {
+            if (string.IsNullOrEmpty(document)) return;
             try
             {
-                string folder = RecoveryFolder;
-                if (Directory.Exists(folder))
-                {
-                    string[] files = Directory.GetFiles(folder);
-                    for (int i = 0; i < files.Length; i++)
-                    {
-                        string name = Path.GetFileName(files[i]);
-                        if (name.StartsWith("recovery-", StringComparison.OrdinalIgnoreCase)
-                            && (name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase)
-                                || name.EndsWith(".docx.bak", StringComparison.OrdinalIgnoreCase)
-                                || name.EndsWith(".docx.meta", StringComparison.OrdinalIgnoreCase)
-                                || name.EndsWith(".docx.meta.bak", StringComparison.OrdinalIgnoreCase)))
-                        {
-                            try { File.Delete(files[i]); }
-                            catch { }
-                        }
-                    }
-                }
+                string folder = Path.Combine(RecoveryFolder, "Skipped");
+                Directory.CreateDirectory(folder);
+                string name = Path.GetFileName(document);
+                string dest = Path.Combine(folder, name + ".skipped");
+                if (File.Exists(document)) File.Move(document, dest);
+                string meta = document + ".meta";
+                if (File.Exists(meta)) File.Move(meta, dest + ".meta");
+                string backup = document + ".bak";
+                if (File.Exists(backup)) File.Move(backup, dest + ".bak");
             }
             catch
             {
+                // Si no se puede mover, se deja la copia intacta para no perderla.
             }
-            _recoveryPath = null;
         }
-
         private bool TryRestoreRecovery()
         {
+            if (!_ownsRecoveryMutex) return false;
             try
             {
                 string folder = RecoveryFolder;
@@ -1324,7 +1326,7 @@ namespace WordPadClone
                         "Recuperación automática", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                     if (answer != DialogResult.Yes)
                     {
-                        ClearAllRecoveryFiles();
+                        QuarantineRecoveryFile(document);
                         return false;
                     }
                     DocumentModel model = DocumentFormats.ReadModel(document, DocumentFormat.Docx);
@@ -1337,7 +1339,6 @@ namespace WordPadClone
                     UpdateTitle();
                     UpdateStatus();
                     _stateLabel.Text = "Documento recuperado";
-                    ClearAllRecoveryFiles();
                     return true;
                 }
             }
@@ -1355,14 +1356,10 @@ namespace WordPadClone
             if (!_dirty) return;
             try
             {
-                if (_autoSaveEnabled && _editor.Document.UnsupportedFeatures.Count == 0
-                    && !string.IsNullOrEmpty(_path) && _format != DocumentFormat.Doc
-                    && !string.Equals(Path.GetExtension(_path), ".doc", StringComparison.OrdinalIgnoreCase))
-                {
-                    SaveTo(_path, _format);
-                    _stateLabel.Text = "Autoguardado " + DateTime.Now.ToString("HH:mm");
-                }
-                else
+                // El autoguardado nunca sobrescribe el documento original.
+                // Así una reescritura con pérdidas no puede destruir la única
+                // versión buena que el usuario tiene en disco.
+                if (_autoSaveEnabled)
                 {
                     string recovery = EnsureRecoveryPath();
                     DocumentFormats.SaveDocx(recovery, _editor.Document);
@@ -1380,13 +1377,13 @@ namespace WordPadClone
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(_path) ? "Sin título" : Path.GetFileName(_path);
-            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.8 Beta" : name + " - Mini Word 0.0.8 Beta") + (_dirty ? " *" : "");
+            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.9 Beta" : name + " - Mini Word 0.0.9 Beta") + (_dirty ? " *" : "");
         }
 
         private void NewDocument()
         {
             if (!ConfirmDiscard()) return;
-            ClearRecoveryFiles();
+            _recoveryPath = null;
             DocumentModel doc = new DocumentModel();
             doc.PageWidthTwips = 11906;
             doc.PageHeightTwips = 16838;
@@ -1430,12 +1427,12 @@ namespace WordPadClone
                     model.UnsupportedFeatures.Add("Formato DOC 97-2003 (importación)");
                 _editor.Document = model;
                 SyncTrackChangesButton();
+                _recoveryPath = null;
                 _path = path;
                 bool importedDoc = format == DocumentFormat.Doc;
                 _format = importedDoc ? DocumentFormat.Docx : format;
                 _dirty = false;
                 _lossWarningAccepted = false;
-                ClearRecoveryFiles();
                 UpdateTitle();
                 UpdateStatus();
                 if (importedDoc)
@@ -1549,7 +1546,11 @@ namespace WordPadClone
             }
             if (_autoSaveTimer != null) _autoSaveTimer.Stop();
             SaveAutoSaveSettings();
-            ClearRecoveryFiles();
+            if (_ownsRecoveryMutex)
+            {
+                try { _recoveryMutex.ReleaseMutex(); } catch { }
+                _ownsRecoveryMutex = false;
+            }
         }
 
         private void HeaderFooter()

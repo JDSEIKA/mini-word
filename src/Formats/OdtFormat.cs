@@ -928,14 +928,15 @@ namespace WordPadClone.Formats
                     }
                 }
 
-                if (text != null) ReadTextChildren(text, model, 0);
+                if (text != null) ReadTextChildren(text, model, 0, 0);
 
                 if (model.Paragraphs.Count == 0) model.Paragraphs.Add(new Paragraph());
                 return model;
             }
 
-            private void ReadTextChildren(XElement parent, DocumentModel model, int listLevel)
+            private void ReadTextChildren(XElement parent, DocumentModel model, int listLevel, int depth)
             {
+                if (depth > 128) throw new InvalidDataException("El ODT contiene un anidamiento excesivo.");
                 foreach (XElement child in parent.Elements())
                 {
                     if (child.Name == TEXT + "p")
@@ -959,7 +960,7 @@ namespace WordPadClone.Formats
                     }
                     else if (child.Name == TEXT + "list")
                     {
-                        ReadList(child, model, listLevel);
+                        ReadList(child, model, listLevel, depth + 1);
                     }
                     else if (child.Name == TABLE + "table")
                     {
@@ -967,13 +968,14 @@ namespace WordPadClone.Formats
                     }
                     else if (child.Name == TEXT + "section")
                     {
-                        ReadTextChildren(child, model, listLevel);
+                        ReadTextChildren(child, model, listLevel, depth + 1);
                     }
                 }
             }
 
-            private void ReadList(XElement list, DocumentModel model, int parentLevel)
+            private void ReadList(XElement list, DocumentModel model, int parentLevel, int depth)
             {
+                if (depth > 128) throw new InvalidDataException("El ODT contiene un anidamiento excesivo.");
                 string styleName = (string)list.Attribute(TEXT + "style-name");
                 ListStyle style = null;
                 if (styleName != null) _listStyles.TryGetValue(styleName, out style);
@@ -1030,7 +1032,7 @@ namespace WordPadClone.Formats
                         }
                         else if (child.Name == TEXT + "list")
                         {
-                            ReadList(child, model, level);
+                            ReadList(child, model, level, depth + 1);
                         }
                     }
                 }
@@ -1049,11 +1051,12 @@ namespace WordPadClone.Formats
                     }
                 }
 
-                ReadInline(element, p, baseRun);
+                ReadInline(element, p, baseRun, 0);
             }
 
-            private void ReadInline(XElement parent, Paragraph p, RunFormat fmt)
+            private void ReadInline(XElement parent, Paragraph p, RunFormat fmt, int depth)
             {
+                if (depth > 128) throw new InvalidDataException("El ODT contiene un anidamiento excesivo.");
                 foreach (XNode node in parent.Nodes())
                 {
                     XText text = node as XText;
@@ -1078,7 +1081,7 @@ namespace WordPadClone.Formats
                             OdtStyle style = ResolveStyle(styleName, "text");
                             if (style != null) ApplyTextProperties(childFmt, style.TextProps);
                         }
-                        ReadInline(child, p, childFmt);
+                        ReadInline(child, p, childFmt, depth + 1);
                     }
                     else if (child.Name == TEXT + "a")
                     {
@@ -1086,7 +1089,7 @@ namespace WordPadClone.Formats
                         link.ForeColor = Color.FromArgb(0, 0, 238);
                         link.Underline = true;
                         link.LinkUrl = (string)child.Attribute(XLINK + "href");
-                        ReadInline(child, p, link);
+                        ReadInline(child, p, link, depth + 1);
                     }
                     else if (child.Name == TEXT + "s")
                     {
@@ -1127,7 +1130,7 @@ namespace WordPadClone.Formats
                     }
                     else
                     {
-                        ReadInline(child, p, fmt);
+                        ReadInline(child, p, fmt, depth + 1);
                     }
                 }
             }
