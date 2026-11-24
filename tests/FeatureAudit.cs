@@ -134,6 +134,39 @@ internal static class P
         if (!comparedInsert || !comparedDelete) throw new Exception("document compare revisions");
         List<Paragraph> toc = TableOfContents.Build(newCompare, 3, delegate(int index) { return 1; });
         if (toc.Count < 2 || !toc[1].IsTocEntry) throw new Exception("table of contents");
+        DocumentModel tableRuns = new DocumentModel();
+        Paragraph tableRunsPara = new Paragraph();
+        tableRunsPara.TableRows = new string[][] { new string[] { "ab", "cd" } };
+        tableRunsPara.TableWidthTwips = 7000;
+        tableRunsPara.RepeatTableHeader = true;
+        tableRunsPara.EnsureTableCells();
+        TableCell runCell = tableRunsPara.TableCells[0][0];
+        runCell.Runs.Clear();
+        RunFormat boldRun = new RunFormat("Calibri", 22); boldRun.Bold = true;
+        TableCellRun firstCellRun = new TableCellRun("a", boldRun);
+        TableCellRun secondCellRun = new TableCellRun("b", new RunFormat("Calibri", 22));
+        secondCellRun.LinkUrl = "https://example.com";
+        runCell.Runs.Add(firstCellRun); runCell.Runs.Add(secondCellRun); runCell.SyncFromRuns();
+        tableRuns.Paragraphs.Add(tableRunsPara);
+        tableRuns.Comments.Add(new DocumentComment
+        {
+            Id = 7, Author = "Tester", Text = "Comentario",
+            Replies = { new CommentReply { Text = "Respuesta", Author = "Tester", Date = "2026-11-23" } }
+        });
+        string tableRunsPath = "tmp-regression/table-runs-audit.docx";
+        if (File.Exists(tableRunsPath)) File.Delete(tableRunsPath);
+        DocumentFormats.SaveDocx(tableRunsPath, tableRuns);
+        DocumentModel tableRunsRound = DocxFormat.Read(tableRunsPath);
+        TableCell roundCell = tableRunsRound.Paragraphs[0].TableCells[0][0];
+        if (roundCell.Runs.Count != 2 || string.IsNullOrEmpty(roundCell.Runs[1].LinkUrl))
+            throw new Exception("table cell runs roundtrip");
+        if (!tableRunsRound.Paragraphs[0].RepeatTableHeader)
+            throw new Exception("repeat table header roundtrip");
+        if (tableRunsRound.Comments.Count != 1 || tableRunsRound.Comments[0].Replies.Count != 1)
+            throw new Exception("comment replies roundtrip");
+        editor.ApplyParagraphStyle("Título 1");
+        if (editor.Document.Paragraphs[0].StyleName != "Título 1")
+            throw new Exception("named paragraph style");
         form.Close();
         Console.WriteLine("FEATURE_AUDIT=PASS");
     }

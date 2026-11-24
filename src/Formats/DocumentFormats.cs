@@ -258,6 +258,8 @@ namespace WordPadClone.Formats
                 p.PreservedXml = sp.PreservedXml;
                 p.PreservedText = sp.PreservedText;
 			p.PreservedFormatKey = sp.PreservedFormatKey;
+                p.StyleName = sp.StyleName;
+                p.RepeatTableHeader = sp.RepeatTableHeader;
                 p.HasModeledField = sp.HasModeledField;
                 p.IsTocEntry = sp.IsTocEntry;
                 p.IsTocTitle = sp.IsTocTitle;

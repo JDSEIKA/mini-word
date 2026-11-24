@@ -280,6 +280,8 @@ namespace WordPadClone.Formats
         public string PreservedXml;
         public string PreservedText;
         public string PreservedFormatKey;
+        public string StyleName = string.Empty;
+        public bool RepeatTableHeader;
         public bool HasModeledField;
         public bool IsTocEntry;
         public bool IsTocTitle;
@@ -354,15 +356,68 @@ namespace WordPadClone.Formats
                 for (int c = 0; c < columns; c++)
                 {
                     TableCell cell = TableCells[r] != null && c < TableCells[r].Length ? TableCells[r][c] : null;
+                    if (cell != null && cell.Runs.Count > 0) cell.SyncFromRuns();
                     TableRows[r][c] = cell == null || cell.Covered ? string.Empty : (cell.Text ?? string.Empty);
                 }
             }
         }
     }
 
+    public sealed class TableCellRun
+    {
+        public string Text = string.Empty;
+        public RunFormat Format;
+        public string LinkUrl;
+
+        public TableCellRun(string text, RunFormat format)
+        {
+            Text = text ?? string.Empty;
+            Format = format;
+        }
+
+        public TableCellRun Clone()
+        {
+            return new TableCellRun(Text, Format == null ? null : Format.Clone())
+            {
+                LinkUrl = LinkUrl
+            };
+        }
+    }
     public sealed class TableCell
     {
         public string Text = string.Empty;
+        public readonly List<TableCellRun> Runs = new List<TableCellRun>();
+
+        public void EnsureRuns()
+        {
+            if (Runs.Count > 0 || string.IsNullOrEmpty(Text)) return;
+            Runs.Add(new TableCellRun(Text, Format));
+            Runs[0].LinkUrl = LinkUrl;
+        }
+
+        public void SyncFromRuns()
+        {
+            if (Runs.Count == 0) return;
+            StringBuilder text = new StringBuilder();
+            for (int i = 0; i < Runs.Count; i++) text.Append(Runs[i].Text);
+            Text = text.ToString();
+            Format = Runs[0].Format;
+            LinkUrl = Runs.Count == 1 ? Runs[0].LinkUrl : null;
+        }
+
+        public TableCellRun RunAt(int offset)
+        {
+            EnsureRuns();
+            int position = 0;
+            for (int i = 0; i < Runs.Count; i++)
+            {
+                TableCellRun run = Runs[i];
+                if (offset >= position && offset <= position + run.Text.Length) return run;
+                position += run.Text.Length;
+            }
+            return Runs.Count > 0 ? Runs[Runs.Count - 1] : null;
+        }
+
         public int RowSpan = 1;
         public int ColSpan = 1;
         public bool Covered;
@@ -376,7 +431,7 @@ namespace WordPadClone.Formats
 
         public TableCell Clone()
         {
-            return new TableCell
+            TableCell copy = new TableCell
             {
                 Text = Text,
                 RowSpan = RowSpan,
@@ -390,6 +445,8 @@ namespace WordPadClone.Formats
                 LinkUrl = LinkUrl,
                 Format = Format == null ? null : Format.Clone()
             };
+            for (int i = 0; i < Runs.Count; i++) copy.Runs.Add(Runs[i].Clone());
+            return copy;
         }
 
     }
@@ -463,6 +520,17 @@ namespace WordPadClone.Formats
         }
     }
 
+    public sealed class CommentReply
+    {
+        public string Text = string.Empty;
+        public string Author = string.Empty;
+        public string Date = string.Empty;
+
+        public CommentReply Clone()
+        {
+            return new CommentReply { Text = Text, Author = Author, Date = Date };
+        }
+    }
     public sealed class DocumentComment
     {
         public int Id;
@@ -470,10 +538,22 @@ namespace WordPadClone.Formats
         public string Author = string.Empty;
         public string Initials = string.Empty;
         public string Date = string.Empty;
+        public bool Resolved;
+        public readonly List<CommentReply> Replies = new List<CommentReply>();
 
         public DocumentComment Clone()
         {
-            return (DocumentComment)MemberwiseClone();
+            DocumentComment copy = new DocumentComment
+            {
+                Id = Id,
+                Text = Text,
+                Author = Author,
+                Initials = Initials,
+                Date = Date,
+                Resolved = Resolved
+            };
+            for (int i = 0; i < Replies.Count; i++) copy.Replies.Add(Replies[i].Clone());
+            return copy;
         }
     }
 

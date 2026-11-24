@@ -125,7 +125,26 @@ namespace WordPadClone.Formats
                         for (int c = 0; c < p.TableCells[r].Length; c++)
                         {
                             TableCell cell = p.TableCells[r][c];
-                            if (cell == null || string.IsNullOrEmpty(cell.LinkUrl)) continue;
+                            if (cell == null) continue;
+                            if (cell.Runs.Count > 0)
+                            {
+                                for (int q = 0; q < cell.Runs.Count; q++)
+                                {
+                                    string runUrl = cell.Runs[q].LinkUrl;
+                                    if (string.IsNullOrEmpty(runUrl)) continue;
+                                    bool runExists = false;
+                                    for (int k = 0; k < hyperlinks.Count; k++)
+                                        if (string.Equals(hyperlinks[k].Url, runUrl, StringComparison.Ordinal)) { runExists = true; break; }
+                                    if (!runExists)
+                                    {
+                                        HyperlinkPart runLink = new HyperlinkPart();
+                                        runLink.RelId = "rIdLink" + (hyperlinks.Count + 1);
+                                        runLink.Url = runUrl;
+                                        hyperlinks.Add(runLink);
+                                    }
+                                }
+                            }
+                            if (string.IsNullOrEmpty(cell.LinkUrl)) continue;
                             bool exists = false;
                             for (int k = 0; k < hyperlinks.Count; k++)
                                 if (string.Equals(hyperlinks[k].Url, cell.LinkUrl, StringComparison.Ordinal)) { exists = true; break; }
@@ -808,6 +827,13 @@ namespace WordPadClone.Formats
             for (int r = 0; r < rows.Length; r++)
             {
                 w.WriteStartElement("w", "tr", W.NamespaceName);
+                if (r == 0 && p.RepeatTableHeader)
+                {
+                    w.WriteStartElement("w", "trPr", W.NamespaceName);
+                    w.WriteStartElement("w", "tblHeader", W.NamespaceName);
+                    w.WriteEndElement();
+                    w.WriteEndElement();
+                }
                 for (int c = 0; c < columns; )
                 {
                     TableCell owner = FindOwnerCell(tableCells, r, c);
@@ -894,30 +920,46 @@ namespace WordPadClone.Formats
             }
             w.WriteEndElement();
             w.WriteStartElement("w", "p", W.NamespaceName);
-            string cellLinkId = cell != null ? HyperlinkRelId(hyperlinks, cell.LinkUrl) : null;
-            if (!string.IsNullOrEmpty(cellLinkId))
+            if (cell != null && cell.Runs.Count > 0)
             {
-                w.WriteStartElement("w", "hyperlink", W.NamespaceName);
-                w.WriteAttributeString("r", "id", R.NamespaceName, cellLinkId);
-            }
-            if (!string.IsNullOrEmpty(text))
-            {
-                w.WriteStartElement("w", "r", W.NamespaceName);
-                RunFormat cellFormat = cell != null && cell.Format != null
-                    ? cell.Format
-                    : new RunFormat("Calibri", 21)
+                for (int ri = 0; ri < cell.Runs.Count; ri++)
+                {
+                    TableCellRun cellRun = cell.Runs[ri];
+                    if (cellRun == null || string.IsNullOrEmpty(cellRun.Text)) continue;
+                    string runLinkId = !string.IsNullOrEmpty(cellRun.LinkUrl)
+                        ? HyperlinkRelId(hyperlinks, cellRun.LinkUrl) : null;
+                    if (!string.IsNullOrEmpty(runLinkId))
                     {
-                        Bold = cell != null && cell.Bold,
-                        Italic = cell != null && cell.Italic
-                    };
-                WriteRunProperties(w, cellFormat);
-                w.WriteStartElement("w", "t", W.NamespaceName);
-                w.WriteAttributeString("xml", "space", null, "preserve");
-                w.WriteString(text);
-                w.WriteEndElement();
-                w.WriteEndElement();
+                        w.WriteStartElement("w", "hyperlink", W.NamespaceName);
+                        w.WriteAttributeString("r", "id", R.NamespaceName, runLinkId);
+                    }
+                    TextInline fieldRun = new TextInline(cellRun.Text,
+                        cellRun.Format == null ? new RunFormat("Calibri", 21) : cellRun.Format.Clone());
+                    fieldRun.Format.LinkUrl = cellRun.LinkUrl;
+                    WriteTextInline(w, fieldRun);
+                    if (!string.IsNullOrEmpty(runLinkId)) w.WriteEndElement();
+                }
             }
-            if (!string.IsNullOrEmpty(cellLinkId)) w.WriteEndElement();
+            else
+            {
+                string cellLinkId = cell != null ? HyperlinkRelId(hyperlinks, cell.LinkUrl) : null;
+                if (!string.IsNullOrEmpty(cellLinkId))
+                {
+                    w.WriteStartElement("w", "hyperlink", W.NamespaceName);
+                    w.WriteAttributeString("r", "id", R.NamespaceName, cellLinkId);
+                }
+                if (!string.IsNullOrEmpty(text))
+                {
+                    TextInline fieldRun = new TextInline(text,
+                        cell != null && cell.Format != null ? cell.Format.Clone() : new RunFormat("Calibri", 21)
+                        {
+                            Bold = cell != null && cell.Bold,
+                            Italic = cell != null && cell.Italic
+                        });
+                    WriteTextInline(w, fieldRun);
+                }
+                if (!string.IsNullOrEmpty(cellLinkId)) w.WriteEndElement();
+            }
             w.WriteEndElement();
             w.WriteEndElement();
         }
@@ -1028,17 +1070,23 @@ namespace WordPadClone.Formats
                 || (p.TabStopsTwips != null && p.TabStopsTwips.Length > 0)
                 || p.Bullet || p.Numbered || p.KeepLinesTogether
                 || p.KeepWithNext || !p.WidowControl || p.OutlineLevel != 0
-                || p.NoSpaceBetweenSameStyle || closeSection != null;
+                || p.NoSpaceBetweenSameStyle || !string.IsNullOrEmpty(p.StyleName) || closeSection != null;
 
             if (hasPPr)
             {
                 w.WriteStartElement("w", "pPr", W.NamespaceName);
+                if (!string.IsNullOrEmpty(p.StyleName))
+                {
+                    w.WriteStartElement("w", "pStyle", W.NamespaceName);
+                    w.WriteAttributeString("w", "val", W.NamespaceName, DocumentStyles.StyleId(p.StyleName));
+                    w.WriteEndElement();
+                }
                 if (p.Bullet || p.Numbered)
                 {
                     w.WriteStartElement("w", "numPr", W.NamespaceName);
                     w.WriteStartElement("w", "ilvl", W.NamespaceName);
                     w.WriteAttributeString("w", "val", W.NamespaceName,
-                        Math.Max(0, Math.Min(2, p.Numbered ? p.NumberLevel : p.BulletLevel)).ToString(CultureInfo.InvariantCulture));
+                        Math.Max(0, Math.Min(8, p.Numbered ? p.NumberLevel : p.BulletLevel)).ToString(CultureInfo.InvariantCulture));
                     w.WriteEndElement();
                     w.WriteStartElement("w", "numId", W.NamespaceName);
                     w.WriteAttributeString("w", "val", W.NamespaceName, p.Numbered ? "2" : "1");
@@ -1818,18 +1866,9 @@ namespace WordPadClone.Formats
                         w.WriteAttributeString("w", "author", W.NamespaceName, comment.Author ?? string.Empty);
                         w.WriteAttributeString("w", "initials", W.NamespaceName, comment.Initials ?? string.Empty);
                         w.WriteAttributeString("w", "date", W.NamespaceName, comment.Date ?? string.Empty);
-                        string[] lines = Normalize(comment.Text).Split('\n');
-                        for (int line = 0; line < lines.Length; line++)
-                        {
-                            w.WriteStartElement("w", "p", W.NamespaceName);
-                            w.WriteStartElement("w", "r", W.NamespaceName);
-                            w.WriteStartElement("w", "t", W.NamespaceName);
-                            w.WriteAttributeString("xml", "space", null, "preserve");
-                            w.WriteString(lines[line]);
-                            w.WriteEndElement();
-                            w.WriteEndElement();
-                            w.WriteEndElement();
-                        }
+                        WriteCommentParagraph(w, comment.Text);
+                        for (int r = 0; r < comment.Replies.Count; r++)
+                            WriteCommentParagraph(w, comment.Replies[r].Text);
                         w.WriteEndElement();
                     }
                     w.WriteEndElement();
@@ -1839,6 +1878,21 @@ namespace WordPadClone.Formats
             }
         }
 
+        private static void WriteCommentParagraph(XmlWriter w, string text)
+        {
+            string[] lines = Normalize(text).Split('\n');
+            for (int line = 0; line < lines.Length; line++)
+            {
+                w.WriteStartElement("w", "p", W.NamespaceName);
+                w.WriteStartElement("w", "r", W.NamespaceName);
+                w.WriteStartElement("w", "t", W.NamespaceName);
+                w.WriteAttributeString("xml", "space", null, "preserve");
+                w.WriteString(lines[line]);
+                w.WriteEndElement();
+                w.WriteEndElement();
+                w.WriteEndElement();
+            }
+        }
         private static string Normalize(string value)
         {
             return (value ?? string.Empty).Replace("\r\n", "\n").Replace('\r', '\n');
@@ -1874,6 +1928,12 @@ namespace WordPadClone.Formats
                     WriteStyle(w, "Normal", "paragraph", true, null, null);
                     WriteStyle(w, "DefaultParagraphFont", "character", true, null, null);
                     WriteStyle(w, "Hyperlink", "character", false, null, null);
+                    WriteStyle(w, "Title", "paragraph", false, "Normal", "Title");
+                    WriteStyle(w, "Subtitle", "paragraph", false, "Normal", "Subtitle");
+                    WriteStyle(w, "Heading1", "paragraph", false, "Normal", "heading 1");
+                    WriteStyle(w, "Heading2", "paragraph", false, "Normal", "heading 2");
+                    WriteStyle(w, "Heading3", "paragraph", false, "Normal", "heading 3");
+                    WriteStyle(w, "Quote", "paragraph", false, "Normal", "Quote");
                     w.WriteEndElement();
                     w.WriteEndDocument();
                 }
@@ -2539,14 +2599,25 @@ namespace WordPadClone.Formats
                         item.Author = (string)comment.Attribute(W + "author") ?? string.Empty;
                         item.Initials = (string)comment.Attribute(W + "initials") ?? string.Empty;
                         item.Date = (string)comment.Attribute(W + "date") ?? string.Empty;
-                        StringBuilder text = new StringBuilder();
+                        bool firstParagraph = true;
                         foreach (XElement p in comment.Descendants(W + "p"))
                         {
-                            if (text.Length > 0) text.Append('\n');
-                            text.Append(CollectText(p));
-                        }
-                        item.Text = text.ToString();
-                        model.Comments.Add(item);
+                            string line = CollectText(p);
+                            if (firstParagraph)
+                            {
+                                item.Text = line;
+                                firstParagraph = false;
+                            }
+                            else
+                            {
+                                item.Replies.Add(new CommentReply
+                                {
+                                    Text = line,
+                                    Author = item.Author,
+                                    Date = item.Date
+                                });
+                            }
+                        }                        model.Comments.Add(item);
                         _commentsById[id] = item;
                     }
                 }
@@ -2677,6 +2748,7 @@ namespace WordPadClone.Formats
 
                 if (!string.IsNullOrEmpty(pStyle))
                 {
+                    p.StyleName = DocumentStyles.NameFromId(pStyle);
                     Paragraph stylePara = GetParagraphStyle(pStyle);
                     if (stylePara != null) CopyParagraphFormat(stylePara, p);
                     RunFormat styleRun = GetRunStyle(pStyle);
@@ -2750,12 +2822,12 @@ namespace WordPadClone.Formats
                 if (bullet)
                 {
                     p.Bullet = true;
-                    p.BulletLevel = Math.Min(2, ilvl);
+                    p.BulletLevel = Math.Min(8, Math.Max(0, ilvl));
                     return true;
                 }
 
                 p.Numbered = true;
-                p.NumberLevel = Math.Min(2, Math.Max(0, ilvl));
+                p.NumberLevel = Math.Min(8, Math.Max(0, ilvl));
                 return true;
             }
 
@@ -3389,13 +3461,44 @@ namespace WordPadClone.Formats
                 return new ImageInline(data, ext, width, height, new RunFormat());
             }
 
+            private void ReadTableCellRuns(XElement tc, TableCell cell)
+            {
+                if (cell == null) return;
+                cell.Runs.Clear();
+                foreach (XElement para in tc.Elements(W + "p"))
+                {
+                    Paragraph temp = new Paragraph();
+                    ReadInlines(para, temp, _defaultRun.Clone(), null);
+                    if (cell.Runs.Count > 0)
+                        cell.Runs.Add(new TableCellRun("\n", _defaultRun.Clone()));
+                    for (int i = 0; i < temp.Inlines.Count; i++)
+                    {
+                        TextInline run = temp.Inlines[i] as TextInline;
+                        if (run == null) continue;
+                        TableCellRun cellRun = new TableCellRun(run.Text, run.Format == null ? _defaultRun.Clone() : run.Format.Clone());
+                        cellRun.LinkUrl = run.Format == null ? null : run.Format.LinkUrl;
+                        cell.Runs.Add(cellRun);
+                    }
+                }
+                if (cell.Runs.Count > 0)
+                {
+                    cell.SyncFromRuns();
+                    bool anyLink = false;
+                    for (int i = 0; i < cell.Runs.Count; i++)
+                        if (!string.IsNullOrEmpty(cell.Runs[i].LinkUrl)) anyLink = true;
+                    if (anyLink) cell.LinkUrl = null;
+                }
+            }
             private void ReadTable(XElement table, DocumentModel model)
             {
                 List<List<TableCell>> cells = new List<List<TableCell>>();
+                bool repeatHeader = false;
                 int columns = 0;
                 foreach (XElement row in table.Descendants(W + "tr"))
                 {
                     if (row.Ancestors(W + "tbl").FirstOrDefault() != table) continue;
+                    XElement rowProps = row.Element(W + "trPr");
+                    if (rowProps != null && rowProps.Element(W + "tblHeader") != null) repeatHeader = true;
                     List<TableCell> rowCells = new List<TableCell>();
                     int column = 0;
                     foreach (XElement tc in row.Elements(W + "tc"))
@@ -3433,6 +3536,7 @@ namespace WordPadClone.Formats
                         }
                         TableCell cell = new TableCell();
                         cell.Text = cellText.ToString();
+                        ReadTableCellRuns(tc, cell);
                         cell.ColSpan = gridSpan;
                         XElement cellLink = tc.Descendants(W + "hyperlink").FirstOrDefault();
                         if (cellLink != null)
@@ -3498,6 +3602,7 @@ namespace WordPadClone.Formats
                 if (string.IsNullOrEmpty(p.TableStyleName)) p.TableStyleName = "TableGrid";
                 ApplyKnownTableStyle(p, grid);
                 p.TableCells = grid;
+                p.RepeatTableHeader = repeatHeader;
                 p.SyncTableRows();
                 int width = 0;
                 XElement tblW = table.Element(W + "tblPr") != null

@@ -642,6 +642,27 @@ namespace WordPadClone.Controls
 			return TrackChanges == enabled;
 		}
 
+		public bool AcceptRevisionAtCaret()
+		{
+			if (_document == null || _caret.P < 0 || _caret.P >= _document.Paragraphs.Count) return false;
+			bool changed = DocumentRevisions.AcceptAt(_document.Paragraphs[_caret.P], _caret.Offset);
+			if (!changed) return false;
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+
+		public bool RejectRevisionAtCaret()
+		{
+			if (_document == null || _caret.P < 0 || _caret.P >= _document.Paragraphs.Count) return false;
+			bool changed = DocumentRevisions.RejectAt(_document.Paragraphs[_caret.P], _caret.Offset);
+			if (!changed) return false;
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
 		public bool AcceptAllRevisions()
 		{
 			bool changed = DocumentRevisions.AcceptAll(_document);
@@ -1054,6 +1075,7 @@ namespace WordPadClone.Controls
 						base.AutoScrollPosition = new Point(-keptScroll.X, -keptScroll.Y);
 				}
 				_dirtyLayout = false;
+				if (RefreshFieldValues()) _dirtyLayout = true;
 				_currentPage = PageForPosition(_caret);
 				if (this.PageCountChanged != null)
 				{
@@ -1071,6 +1093,47 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		private bool RefreshFieldValues()
+		{
+			bool changed = false;
+			int pageCount = Math.Max(1, _pages.Count);
+			for (int p = 0; p < _document.Paragraphs.Count; p++)
+			{
+				Paragraph paragraph = _document.Paragraphs[p];
+				int offset = 0;
+				for (int i = 0; i < paragraph.Inlines.Count; i++)
+				{
+					TextInline run = paragraph.Inlines[i] as TextInline;
+					if (run == null) continue;
+					if (run.Field == FieldKind.None)
+					{
+						offset += run.Text.Length;
+						continue;
+					}
+					int fieldOffset = offset;
+					int fieldPage = 1;
+					for (int l = 0; l < _lines.Count; l++)
+					{
+						if (_lines[l].Paragraph == p && fieldOffset >= _lines[l].Start && fieldOffset <= _lines[l].End)
+						{
+							fieldPage = _lines[l].Page + 1;
+							break;
+						}
+					}
+					string value;
+					if (run.Field == FieldKind.NumPages) value = pageCount.ToString(CultureInfo.InvariantCulture);
+					else if (run.Field == FieldKind.Page) value = fieldPage.ToString(CultureInfo.InvariantCulture);
+					else value = FieldText.Display(run.Field, _document, fieldPage, pageCount);
+					if (!string.Equals(run.Text, value, StringComparison.Ordinal))
+					{
+						run.Text = value;
+						changed = true;
+					}
+					offset += run.Text.Length;
+				}
+			}
+			return changed;
+		}
 		private LayoutPage NewPage(int index, DocumentSection section)
 		{
 			float num = (float)section.PageWidthTwips * (1f / 15f) * _zoom;
@@ -2545,6 +2608,11 @@ namespace WordPadClone.Controls
 						{
 							g.DrawRectangle(pen2, rect.X, rect.Y, rect.Width, rect.Height);
 						}
+						if (layoutTableCell.Cell != null && layoutTableCell.Cell.Runs.Count > 0)
+						{
+							DrawCellRuns(g, layoutTableCell, stringFormat);
+							continue;
+						}
 						if (layoutTableCell.Cell != null && !string.IsNullOrEmpty(layoutTableCell.Cell.Text))
 						{
 							RectangleF layoutRectangle = new RectangleF(layoutTableCell.X + 4f, layoutTableCell.Y + 3f, Math.Max(1f, layoutTableCell.Width - 8f), Math.Max(1f, layoutTableCell.Height - 5f));
@@ -2579,6 +2647,52 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		private void DrawCellRuns(Graphics g, LayoutTableCell cell, StringFormat format)
+		{
+			if (cell == null || cell.Cell == null) return;
+			float left = cell.X + 4f;
+			float top = cell.Y + 3f;
+			float right = cell.X + Math.Max(1f, cell.Width - 8f);
+			float x = left;
+			float y = top;
+			cell.Cell.EnsureRuns();
+			for (int i = 0; i < cell.Cell.Runs.Count; i++)
+			{
+				TableCellRun run = cell.Cell.Runs[i];
+				if (run == null || string.IsNullOrEmpty(run.Text)) continue;
+				RunFormat runFormat = run.Format ?? cell.Cell.Format ?? new RunFormat("Calibri", 21);
+				Font font = GetFont(runFormat);
+				Color color = string.IsNullOrEmpty(run.LinkUrl) ? (runFormat.ForeColor ?? Color.Black)
+					: Color.FromArgb(0, 82, 204);
+				string[] lines = run.Text.Replace("\r", string.Empty).Split('\n');
+				for (int line = 0; line < lines.Length; line++)
+				{
+					string part = lines[line];
+					if (part.Length > 0)
+					{
+						SizeF size = g.MeasureString(part, font);
+						if (x > left && x + size.Width > right)
+						{
+							x = left;
+							y += font.GetHeight(g) + 1f;
+						}
+						using (Brush brush = new SolidBrush(color))
+							g.DrawString(part, font, brush, x, y, format);
+						if (!string.IsNullOrEmpty(run.LinkUrl))
+						{
+							using (Pen linkPen = new Pen(color))
+								g.DrawLine(linkPen, x, y + size.Height, x + size.Width, y + size.Height);
+						}
+						x += size.Width;
+					}
+					if (line < lines.Length - 1)
+					{
+						x = left;
+						y += font.GetHeight(g) + 1f;
+					}
+				}
+			}
+		}
 		private void DrawSpellingHighlight(Graphics g, LayoutPage page)
 		{
 			if (_spellingParagraph < 0 || _spellingLength <= 0) return;
@@ -3527,6 +3641,27 @@ namespace WordPadClone.Controls
 			return base.IsInputKey(keyData);
 		}
 
+		private int CellOffsetAtX(TableCell cell, float x)
+		{
+			if (cell == null) return 0;
+			cell.EnsureRuns();
+			float position = 0f;
+			for (int i = 0; i < cell.Runs.Count; i++)
+			{
+				TableCellRun run = cell.Runs[i];
+				float width = Measure(run.Text, GetFont(run.Format == null ? cell.Format : run.Format));
+				if (x <= position + width || i == cell.Runs.Count - 1)
+				{
+					int start = 0;
+					for (int j = 0; j < i; j++) start += cell.Runs[j].Text.Length;
+					if (width <= 0f) return start;
+					float ratio = Math.Max(0f, Math.Min(1f, (x - position) / width));
+					return start + (int)Math.Round(ratio * run.Text.Length);
+				}
+				position += width;
+			}
+			return cell.Text == null ? 0 : cell.Text.Length;
+		}
 		private string LinkAtClient(Point client)
 		{
 			EnsureLayout();
@@ -3550,10 +3685,18 @@ namespace WordPadClone.Controls
 				for (int j = 0; j < _tables[i].Cells.Count; j++)
 				{
 					LayoutTableCell cell = _tables[i].Cells[j];
-					if (cell.Cell == null || string.IsNullOrEmpty(cell.Cell.LinkUrl)) continue;
+					if (cell.Cell == null) continue;
 					if (x >= cell.X && x <= cell.X + cell.Width
 						&& y >= cell.Y && y <= cell.Y + cell.Height)
+					{
+						if (cell.Cell.Runs.Count > 0)
+						{
+							int offset = CellOffsetAtX(cell.Cell, x - cell.X - 4f);
+							TableCellRun run = cell.Cell.RunAt(offset);
+							if (run != null && !string.IsNullOrEmpty(run.LinkUrl)) return run.LinkUrl;
+						}
 						return cell.Cell.LinkUrl;
+					}
 				}
 			}
 			return null;
@@ -5265,6 +5408,7 @@ namespace WordPadClone.Controls
 					if (_cellEdit != null && !_suppressCellLeave)
 					{
 						_cellEdit.Cell.Text = _cellEditor.Text;
+						_cellEdit.Cell.Runs.Clear();
 						if (_cellEditParagraph >= 0 && _cellEditParagraph < _document.Paragraphs.Count)
 						{
 							_document.Paragraphs[_cellEditParagraph].SyncTableRows();
@@ -5283,6 +5427,8 @@ namespace WordPadClone.Controls
 				base.Controls.Add(_cellEditor);
 			}
 			_cellEdit = cell;
+			cell.Cell.SyncFromRuns();
+			cell.Cell.Runs.Clear();
 			_cellEditParagraph = FindTableParagraph(cell);
 			_cellOriginalText = cell.Cell.Text ?? string.Empty;
 			PushUndo();
@@ -5572,6 +5718,7 @@ namespace WordPadClone.Controls
 				if (_cellEdit != null)
 				{
 					_cellEdit.Cell.Text = _cellEditor.Text;
+					_cellEdit.Cell.Runs.Clear();
 					if (_cellEditParagraph >= 0 && _cellEditParagraph < _document.Paragraphs.Count)
 					{
 						_document.Paragraphs[_cellEditParagraph].SyncTableRows();
@@ -7497,6 +7644,64 @@ namespace WordPadClone.Controls
 			ChangeIndent(-360);
 		}
 
+		public bool ToggleRepeatTableHeader()
+		{
+			int paragraph = TableAtCaret;
+			if (paragraph < 0) return false;
+			_document.Paragraphs[paragraph].RepeatTableHeader = !_document.Paragraphs[paragraph].RepeatTableHeader;
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+		public bool ApplyParagraphStyle(string name)
+		{
+			if (_document == null || string.IsNullOrEmpty(name)) return false;
+			CaretPos start, end;
+			NormalizeSelection(out start, out end);
+			for (int i = start.P; i <= end.P && i < _document.Paragraphs.Count; i++)
+				DocumentStyles.Apply(_document.Paragraphs[i], name);
+			_typingFormat = GetDefaultFormat();
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+		public bool IncreaseListLevel()
+		{
+			return ChangeListLevel(1);
+		}
+
+		public bool DecreaseListLevel()
+		{
+			return ChangeListLevel(-1);
+		}
+
+		private bool ChangeListLevel(int delta)
+		{
+			if (_document == null) return false;
+			CaretPos start, end;
+			NormalizeSelection(out start, out end);
+			bool changed = false;
+			for (int i = start.P; i <= end.P && i < _document.Paragraphs.Count; i++)
+			{
+				Paragraph p = _document.Paragraphs[i];
+				if (!p.Bullet && !p.Numbered) continue;
+				int level = p.Bullet ? p.BulletLevel : p.NumberLevel;
+				level = Math.Max(0, Math.Min(8, level + delta));
+				if (p.Bullet) p.BulletLevel = level; else p.NumberLevel = level;
+				p.LeftIndentTwips = 720 * (level + 1);
+				p.FirstLineIndentTwips = -360;
+				changed = true;
+			}
+			if (changed)
+			{
+				InvalidateLayout(true);
+				OnTextChanged();
+				OnSelectionChanged();
+			}
+			return changed;
+		}
 		public void ToggleBullet()
 		{
 			PushUndo();
@@ -7900,6 +8105,8 @@ namespace WordPadClone.Controls
 			paragraph.PageBreakBefore = source.PageBreakBefore;
 			paragraph.SectionIndex = source.SectionIndex;
 			paragraph.OutlineLevel = source.OutlineLevel;
+			paragraph.StyleName = source.StyleName;
+			paragraph.RepeatTableHeader = source.RepeatTableHeader;
 			paragraph.HasModeledField = source.HasModeledField;
 			paragraph.IsTocEntry = source.IsTocEntry;
 			paragraph.IsTocTitle = source.IsTocTitle;

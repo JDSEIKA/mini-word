@@ -60,7 +60,7 @@ namespace WordPadClone
 
         public NativeEditorForm(string[] args)
         {
-            Text = "Mini Word 0.0.5 Beta";
+            Text = "Mini Word 0.0.6 Beta";
             AccessibleName = "Mini Word";
             AccessibleDescription = "Procesador de textos Mini Word";
             Font = new Font(FontResolver.Resolve("Segoe UI", "Español"), 9f);
@@ -523,6 +523,29 @@ namespace WordPadClone
             group.Strip.Items.Add(IconButton("Disminuir sangría", "outdent", delegate { _editor.DecreaseIndent(); SyncToolbar(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Viñeta", "bullet", delegate { _editor.ToggleBullet(); SyncToolbar(); _editor.Focus(); }));
             group.Strip.Items.Add(IconButton("Numeración", "numbered", delegate { _editor.ToggleNumberedList(); SyncToolbar(); _editor.Focus(); }));
+            ToolStripDropDownButton listLevels = new ToolStripDropDownButton("Lista");
+            listLevels.Image = RibbonIcons.Get("numbered");
+            listLevels.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            listLevels.TextImageRelation = TextImageRelation.ImageAboveText;
+            listLevels.TextAlign = ContentAlignment.BottomCenter;
+            listLevels.ToolTipText = "Nivel de lista";
+            listLevels.DropDownItems.Add(new ToolStripMenuItem("Aumentar nivel", null, delegate { _editor.IncreaseListLevel(); SyncToolbar(); _editor.Focus(); }));
+            listLevels.DropDownItems.Add(new ToolStripMenuItem("Disminuir nivel", null, delegate { _editor.DecreaseListLevel(); SyncToolbar(); _editor.Focus(); }));
+            group.Strip.Items.Add(listLevels);
+            ToolStripDropDownButton styles = new ToolStripDropDownButton("Estilos");
+            styles.Image = RibbonIcons.Get("paragraph");
+            styles.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            styles.TextImageRelation = TextImageRelation.ImageAboveText;
+            styles.TextAlign = ContentAlignment.BottomCenter;
+            styles.ToolTipText = "Aplicar estilo de párrafo";
+            for (int si = 0; si < DocumentStyles.Names.Length; si++)
+            {
+                string styleName = DocumentStyles.Names[si];
+                ToolStripMenuItem item = new ToolStripMenuItem(styleName);
+                item.Click += delegate { _editor.ApplyParagraphStyle(styleName); SyncToolbar(); _editor.Focus(); };
+                styles.DropDownItems.Add(item);
+            }
+            group.Strip.Items.Add(styles);
             return group;
         }
 
@@ -542,6 +565,7 @@ namespace WordPadClone
             group.Strip.Items.Add(LargeButton("Dividir celda", "split", delegate { _editor.SplitSelectedTableCell(); }));
             group.Strip.Items.Add(LargeButton("Añadir columna", "addcolumn", delegate { if (!_editor.AddTableColumn()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
             group.Strip.Items.Add(LargeButton("Quitar columna", "removecolumn", delegate { if (!_editor.RemoveTableColumn()) MessageBox.Show(this, "Seleccione una tabla simple, sin celdas combinadas.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
+            group.Strip.Items.Add(LargeButton("Repetir encabezado", "table", delegate { if (!_editor.ToggleRepeatTableHeader()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
             return group;
         }
 
@@ -687,12 +711,33 @@ namespace WordPadClone
             });
             _trackChangesButton.CheckOnClick = false;
             group.Strip.Items.Add(_trackChangesButton);
+            group.Strip.Items.Add(LargeButton("Aceptar cambio", "check", delegate { AcceptOneRevision(); }));
+            group.Strip.Items.Add(LargeButton("Rechazar cambio", "close", delegate { RejectOneRevision(); }));
             group.Strip.Items.Add(LargeButton("Aceptar todo", "check", delegate { AcceptRevisions(); }));
             group.Strip.Items.Add(LargeButton("Rechazar todo", "close", delegate { RejectRevisions(); }));
             group.Strip.Items.Add(LargeButton("Comparar documentos", "find", delegate { CompareDocuments(); }));
             return group;
         }
 
+        private void AcceptOneRevision()
+        {
+            if (!_editor.AcceptRevisionAtCaret())
+                MessageBox.Show(this, "Coloque el cursor sobre un cambio.", "Control de cambios",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _dirty = true;
+            UpdateTitle();
+            _editor.Focus();
+        }
+
+        private void RejectOneRevision()
+        {
+            if (!_editor.RejectRevisionAtCaret())
+                MessageBox.Show(this, "Coloque el cursor sobre un cambio.", "Control de cambios",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _dirty = true;
+            UpdateTitle();
+            _editor.Focus();
+        }
         private void AcceptRevisions()
         {
             if (!_editor.AcceptAllRevisions())
@@ -729,7 +774,8 @@ namespace WordPadClone
                 {
                     DocumentModel other = DocumentFormats.ReadModel(dialog.FileName,
                         DocumentFormats.Detect(dialog.FileName));
-                    DocumentModel compared = DocumentCompare.Compare(_editor.Document, other);
+                    List<string> formatNotes = new List<string>();
+                    DocumentModel compared = DocumentCompare.Compare(_editor.Document, other, formatNotes);
                     _editor.Document = compared;
                     _path = string.Empty;
                     _format = DocumentFormat.Docx;
@@ -737,7 +783,12 @@ namespace WordPadClone
                     _lossWarningAccepted = false;
                     UpdateTitle();
                     UpdateStatus();
-                    _status.Text = "Documento comparado con cambios controlados";
+                    _status.Text = "Documento comparado con cambios controlados"
+                        + (formatNotes.Count > 0 ? "; " + formatNotes.Count + " cambios de formato" : string.Empty);
+                    if (formatNotes.Count > 0)
+                        MessageBox.Show(this, "La comparación detectó " + formatNotes.Count
+                            + " cambios de formato. Se aplicaron como formato del documento nuevo.",
+                            "Comparar documentos", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     _editor.Focus();
                 }
                 catch (Exception ex)
@@ -890,7 +941,7 @@ namespace WordPadClone
         private void ShowAbout()
         {
             MessageBox.Show(this,
-                "Mini Word 0.0.5 Beta\nEditor nativo de documentos DOCX.\n"
+                "Mini Word 0.0.6 Beta\nEditor nativo de documentos DOCX.\n"
                 + "Motor tipográfico y de paginación propio.\n"
                 + "Secciones, columnas, objetos flotantes, notas, comentarios y estilos de tabla.",
                 "Acerca de Mini Word", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -902,7 +953,11 @@ namespace WordPadClone
             group.Strip.Items.Add(LargeButton("Comentarios", "comment", delegate
             {
                 using (CommentsDialog dialog = new CommentsDialog(_editor.Document))
+                {
                     dialog.ShowDialog(this);
+                    _dirty = true;
+                    UpdateTitle();
+                }
             }));
             return group;
         }
@@ -1325,7 +1380,7 @@ namespace WordPadClone
         private void UpdateTitle()
         {
             string name = string.IsNullOrEmpty(_path) ? "Sin título" : Path.GetFileName(_path);
-            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.5 Beta" : name + " - Mini Word 0.0.5 Beta") + (_dirty ? " *" : "");
+            Text = (string.IsNullOrEmpty(name) ? "Mini Word 0.0.6 Beta" : name + " - Mini Word 0.0.6 Beta") + (_dirty ? " *" : "");
         }
 
         private void NewDocument()

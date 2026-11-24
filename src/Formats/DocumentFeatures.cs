@@ -6,6 +6,101 @@ using System.Text;
 
 namespace WordPadClone.Formats
 {
+    public static class DocumentStyles
+    {
+        public static readonly string[] Names = new string[]
+        {
+            "Normal", "Título", "Subtítulo", "Título 1", "Título 2", "Título 3", "Cita"
+        };
+
+        public static string NameFromId(string id)
+        {
+            switch ((id ?? string.Empty).ToLowerInvariant())
+            {
+                case "title": return "Título";
+                case "subtitle": return "Subtítulo";
+                case "heading1": return "Título 1";
+                case "heading2": return "Título 2";
+                case "heading3": return "Título 3";
+                case "quote": return "Cita";
+                default: return "Normal";
+            }
+        }
+
+        public static string StyleId(string name)
+        {
+            switch (name)
+            {
+                case "Título": return "Title";
+                case "Subtítulo": return "Subtitle";
+                case "Título 1": return "Heading1";
+                case "Título 2": return "Heading2";
+                case "Título 3": return "Heading3";
+                case "Cita": return "Quote";
+                default: return "Normal";
+            }
+        }
+
+        public static void Apply(Paragraph p, string name)
+        {
+            if (p == null) return;
+            p.StyleName = name ?? "Normal";
+            string id = StyleId(p.StyleName);
+            RunFormat format = new RunFormat("Calibri", 22);
+            p.Alignment = ParagraphAlignment.Left;
+            p.LeftIndentTwips = 0;
+            p.RightIndentTwips = 0;
+            p.FirstLineIndentTwips = 0;
+            p.SpaceBeforeTwips = 0;
+            p.SpaceAfterTwips = 0;
+            p.OutlineLevel = 0;
+            if (id == "Title")
+            {
+                format.SizeHalfPoints = 56; format.Bold = true;
+                p.Alignment = ParagraphAlignment.Center; p.SpaceAfterTwips = 240;
+            }
+            else if (id == "Subtitle")
+            {
+                format.SizeHalfPoints = 32; format.Italic = true; format.ForeColor = Color.FromArgb(89, 89, 89);
+                p.Alignment = ParagraphAlignment.Center; p.SpaceAfterTwips = 180;
+            }
+            else if (id == "Heading1")
+            {
+                format.SizeHalfPoints = 40; format.Bold = true; p.OutlineLevel = 1;
+                p.SpaceBeforeTwips = 240; p.SpaceAfterTwips = 120; p.KeepWithNext = true;
+            }
+            else if (id == "Heading2")
+            {
+                format.SizeHalfPoints = 32; format.Bold = true; p.OutlineLevel = 2;
+                p.SpaceBeforeTwips = 200; p.SpaceAfterTwips = 100; p.KeepWithNext = true;
+            }
+            else if (id == "Heading3")
+            {
+                format.SizeHalfPoints = 28; format.Bold = true; format.Italic = true; p.OutlineLevel = 3;
+                p.SpaceBeforeTwips = 160; p.SpaceAfterTwips = 80; p.KeepWithNext = true;
+            }
+            else if (id == "Quote")
+            {
+                format.SizeHalfPoints = 22; format.Italic = true; format.ForeColor = Color.FromArgb(89, 89, 89);
+                p.LeftIndentTwips = 720; p.RightIndentTwips = 720; p.SpaceBeforeTwips = 120; p.SpaceAfterTwips = 120;
+            }
+            for (int i = 0; i < p.Inlines.Count; i++)
+            {
+                TextInline run = p.Inlines[i] as TextInline;
+                if (run == null) continue;
+                if (run.Format == null) run.Format = format.Clone();
+                else
+                {
+                    run.Format.FontFamily = format.FontFamily;
+                    run.Format.SizeHalfPoints = format.SizeHalfPoints;
+                    run.Format.Bold = format.Bold;
+                    run.Format.Italic = format.Italic;
+                    run.Format.ForeColor = format.ForeColor;
+                }
+            }
+            if (p.Inlines.Count == 0) p.Inlines.Add(new TextInline(string.Empty, format));
+        }
+    }
     /// <summary>Fields, revision marks, document comparison and TOC helpers.</summary>
     public static class FieldText
     {
@@ -135,6 +230,48 @@ namespace WordPadClone.Formats
             return true;
         }
 
+        public static bool AcceptAt(Paragraph p, int offset)
+        {
+            TextInline run = RunAt(p, offset);
+            if (run == null || run.Revision == RevisionKind.None) return false;
+            if (run.Revision == RevisionKind.Delete)
+            {
+                p.Inlines.Remove(run);
+                if (p.Inlines.Count == 0 && p.TableRows == null)
+                    p.Inlines.Add(new TextInline(string.Empty, new RunFormat()));
+            }
+            else run.Revision = RevisionKind.None;
+            return true;
+        }
+
+        public static bool RejectAt(Paragraph p, int offset)
+        {
+            TextInline run = RunAt(p, offset);
+            if (run == null || run.Revision == RevisionKind.None) return false;
+            if (run.Revision == RevisionKind.Insert)
+            {
+                p.Inlines.Remove(run);
+                if (p.Inlines.Count == 0 && p.TableRows == null)
+                    p.Inlines.Add(new TextInline(string.Empty, new RunFormat()));
+            }
+            else run.Revision = RevisionKind.None;
+            return true;
+        }
+
+        private static TextInline RunAt(Paragraph p, int offset)
+        {
+            if (p == null || offset < 0) return null;
+            int position = 0;
+            for (int i = 0; i < p.Inlines.Count; i++)
+            {
+                TextInline run = p.Inlines[i] as TextInline;
+                if (run == null) continue;
+                if (offset >= position && offset <= position + run.Text.Length)
+                    return run;
+                position += run.Text.Length;
+            }
+            return null;
+        }
         private static bool HasRevisions(DocumentModel doc)
         {
             for (int i = 0; i < doc.Paragraphs.Count; i++)
@@ -235,9 +372,10 @@ namespace WordPadClone.Formats
             return index;
         }
 
-        public static void RefreshPages(DocumentModel doc, Func<int, int> pageOf)
+        public static bool RefreshPages(DocumentModel doc, Func<int, int> pageOf)
         {
-            if (doc == null || pageOf == null) return;
+            if (doc == null || pageOf == null) return false;
+            bool changed = false;
             for (int i = 0; i < doc.Paragraphs.Count; i++)
             {
                 Paragraph p = doc.Paragraphs[i];
@@ -250,9 +388,10 @@ namespace WordPadClone.Formats
                     TextInline last = p.Inlines[p.Inlines.Count - 1] as TextInline;
                     if (last != null) last.Text = page.ToString(CultureInfo.InvariantCulture);
                 }
+                changed = true;
             }
+            return changed;
         }
-
         private static string ParagraphText(Paragraph p)
         {
             StringBuilder text = new StringBuilder();
@@ -268,6 +407,11 @@ namespace WordPadClone.Formats
     public static class DocumentCompare
     {
         public static DocumentModel Compare(DocumentModel oldDoc, DocumentModel newDoc)
+        {
+            return Compare(oldDoc, newDoc, null);
+        }
+
+        public static DocumentModel Compare(DocumentModel oldDoc, DocumentModel newDoc, List<string> formatNotes)
         {
             if (newDoc == null) return oldDoc;
             DocumentModel result = new DocumentModel();
@@ -289,6 +433,8 @@ namespace WordPadClone.Formats
                 int kind = ops[i][0], oi = ops[i][1], ni = ops[i][2];
                 if (kind == 0)
                 {
+                    if (formatNotes != null && !string.Equals(FormatKey(oldDoc.Paragraphs[oi]), FormatKey(newDoc.Paragraphs[ni]), StringComparison.Ordinal))
+                        formatNotes.Add("Párrafo " + (oi + 1) + ": cambió el formato");
                     result.Paragraphs.Add(DiffParagraph(oldDoc.Paragraphs[oi], newDoc.Paragraphs[ni]));
                 }
                 else if (kind == 1)
@@ -317,6 +463,29 @@ namespace WordPadClone.Formats
             return result;
         }
 
+        private static string FormatKey(Paragraph p)
+        {
+            if (p == null) return string.Empty;
+            StringBuilder key = new StringBuilder();
+            key.Append((int)p.Alignment).Append('|').Append(p.LeftIndentTwips).Append('|')
+                .Append(p.RightIndentTwips).Append('|').Append(p.FirstLineIndentTwips).Append('|')
+                .Append(p.SpaceBeforeTwips).Append('|').Append(p.SpaceAfterTwips).Append('|')
+                .Append(p.LineSpacing).Append('|').Append(p.OutlineLevel).Append('|')
+                .Append(p.StyleName).Append('|').Append(p.Bullet).Append(p.BulletLevel)
+                .Append(p.Numbered).Append(p.NumberLevel);
+            for (int i = 0; i < p.Inlines.Count; i++)
+            {
+                TextInline run = p.Inlines[i] as TextInline;
+                if (run == null || run.Format == null) continue;
+                RunFormat f = run.Format;
+                key.Append('#').Append(f.FontFamily).Append(',').Append(f.SizeHalfPoints)
+                    .Append(f.Bold ? 'B' : 'b').Append(f.Italic ? 'I' : 'i')
+                    .Append(f.Underline ? 'U' : 'u').Append(f.Strikeout ? 'S' : 's')
+                    .Append(',').Append(f.ForeColor.HasValue ? f.ForeColor.Value.ToArgb() : 0)
+                    .Append(',').Append(f.BackColor.HasValue ? f.BackColor.Value.ToArgb() : 0);
+            }
+            return key.ToString();
+        }
         private static Paragraph DiffParagraph(Paragraph oldP, Paragraph newP)
         {
             Paragraph result = CloneParagraph(newP, RevisionKind.None);
@@ -411,6 +580,8 @@ namespace WordPadClone.Formats
             p.NumberLevel = source.NumberLevel;
             p.PageBreakBefore = source.PageBreakBefore;
             p.SectionIndex = source.SectionIndex;
+            p.StyleName = source.StyleName;
+            p.RepeatTableHeader = source.RepeatTableHeader;
             p.OutlineLevel = source.OutlineLevel;
             p.NoSpaceBetweenSameStyle = source.NoSpaceBetweenSameStyle;
             p.KeepLinesTogether = source.KeepLinesTogether;

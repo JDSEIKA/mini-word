@@ -128,3 +128,59 @@ Las pruebas cubren:
 - Comparación de documentos y generación de revisiones.
 - Construcción de índice.
 - Aceptar/rechazar cambios.
+
+## Actualización 0.0.6: Fases A y B
+
+### Campos dinámicos
+
+- `PAGE` y `NUMPAGES` se recalculan después del layout.
+- `DATE` y `TIME` se actualizan al repaginar.
+- El resto de campos conserva su valor calculado.
+
+### Índice
+
+- Los números de página del índice se refrescan al repaginar.
+- **Actualizar índice** sigue siendo la operación que reconstruye las entradas.
+
+### Cambios individuales
+
+- **Aceptar cambio** y **Rechazar cambio** actúan sobre el cambio bajo el cursor.
+- **Aceptar todo** y **Rechazar todo** siguen disponibles.
+
+### Tablas por fragmento
+
+- Una celda puede contener varios tramos con formato y enlace propios.
+- Se conservan al abrir y guardar DOCX.
+- Al editar una celda, Mini Word la convierte en un tramo único; es una limitación conocida.
+- Los enlaces por fragmento funcionan al hacer clic dentro de la celda.
+
+### Estilos con nombre
+
+- **Inicio → Estilos** aplica: Normal, Título, Subtítulo, Título 1, Título 2, Título 3 y Cita.
+- Se exportan como `w:pStyle` y se conservan al reabrir.
+- No hay editor completo de estilos ni herencia de estilos de Word.
+
+### Listas multinivel
+
+- Hasta 9 niveles.
+- **Inicio → Lista** permite aumentar o disminuir el nivel.
+- Se exporta `w:ilvl` y la definición de numeración de 9 niveles.
+- No hay listas de verificación ni numeración de esquema completo.
+
+### Repetir encabezado de tabla
+
+- **Tablas → Repetir encabezado** marca la primera fila como encabezado.
+- Se exporta como `w:tblHeader` y Word/LibreOffice la repiten al paginar.
+- **Limitación:** la vista previa de Mini Word todavía coloca la tabla completa en una página; no divide tablas largas.
+
+### Comparación con formato
+
+- Además del texto, la comparación detecta cambios de formato.
+- Se muestran como un aviso con el número de párrafos afectados.
+- Los cambios de formato no se representan como marcas de revisión.
+
+### Comentarios con respuestas
+
+- **Revisar → Comentarios** permite responder y marcar como resuelto.
+- Las respuestas se guardan como párrafos adicionales en `comments.xml`.
+- El estado resuelto es local; Word no lo conserva como estado nativo.
