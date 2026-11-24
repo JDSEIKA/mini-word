@@ -1,6 +1,6 @@
 # Mini Word — alcance de beta
 
-Versión de evaluación: 0.0.6 Beta
+Versión de evaluación: 0.0.7 Beta
 Fecha: 2026-11-15
 
 ## Qué incluye esta beta

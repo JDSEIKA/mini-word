@@ -152,6 +152,15 @@ namespace WordPadClone.Controls
                         g.DrawLine(pen, 16, 18, 27, 18);
                         g.DrawLine(pen, 16, 28, 27, 28);
                         break;
+                    case "list-level":
+                        // Árbol de niveles: padre y dos hijos conectados.
+                        g.DrawRectangle(pen, 5, 4, 6, 6);
+                        g.DrawLine(dark, 8, 10, 8, 20);
+                        g.DrawLine(dark, 8, 14, 14, 14);
+                        g.DrawLine(dark, 8, 22, 18, 22);
+                        g.FillRectangle(accent, 14, 11, 6, 6);
+                        g.FillRectangle(accent, 18, 19, 6, 6);
+                        break;
                     case "bullet":
                         for (int i = 0; i < 3; i++)
                         {
@@ -197,7 +206,7 @@ namespace WordPadClone.Controls
                         break;
                     case "zoom":
                         g.DrawEllipse(pen, 5, 5, 15, 15);
-                        g.DrawLine(pen, 18, 18, 27, 27);
+                        g.DrawLine(pen, 21, 21, 28, 28);
                         g.DrawLine(dark, 10, 12, 16, 12);
                         g.DrawLine(dark, 13, 9, 13, 16);
                         break;
@@ -213,14 +222,17 @@ namespace WordPadClone.Controls
                         g.DrawLine(dark, 7, 11, 15, 11);
                         break;
                     case "zoom-reset":
-                        using (Font percent = new Font("Segoe UI", 8.5f, FontStyle.Bold))
+                        // Lupa con "1:1": escala real, más legible que solo el texto.
+                        g.DrawEllipse(pen, 3, 3, 20, 20);
+                        g.DrawLine(pen, 21, 21, 28, 28);
+                        using (Font scale = new Font("Segoe UI", 11.5f, FontStyle.Bold))
                         using (StringFormat centered = new StringFormat())
                         {
                             centered.Alignment = StringAlignment.Center;
                             centered.LineAlignment = StringAlignment.Center;
                             centered.FormatFlags = StringFormatFlags.NoWrap | StringFormatFlags.NoClip;
-                            g.DrawString("100%", percent, accent,
-                                new RectangleF(0, 0, 32, 32), centered);
+                            g.DrawString("1:1", scale, accent,
+                                new RectangleF(3, 3, 21, 21), centered);
                         }
                         break;
                     case "find":
