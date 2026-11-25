@@ -574,6 +574,8 @@ namespace WordPadClone
             group.Strip.Items.Add(LargeButton("Dividir celda", "split", delegate { _editor.SplitSelectedTableCell(); }));
             group.Strip.Items.Add(LargeButton("Añadir columna", "addcolumn", delegate { if (!_editor.AddTableColumn()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
             group.Strip.Items.Add(LargeButton("Quitar columna", "removecolumn", delegate { if (!_editor.RemoveTableColumn()) MessageBox.Show(this, "Seleccione una tabla simple, sin celdas combinadas.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
+            group.Strip.Items.Add(LargeButton("Color de celda", "color", delegate { ChooseCellColor(); }));
+            group.Strip.Items.Add(IconButton("Sin color", "table", delegate { ClearCellColor(); }));
             group.Strip.Items.Add(LargeButton("Repetir encabezado", "table", delegate { if (!_editor.ToggleRepeatTableHeader()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
             return group;
         }
@@ -1793,6 +1795,34 @@ namespace WordPadClone
             }
         }
 
+        private void ChooseCellColor()
+        {
+            using (ColorDialog dialog = new ColorDialog())
+            {
+                dialog.FullOpen = true;
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                if (!_editor.SetTableCellShading(dialog.Color))
+                {
+                    MessageBox.Show(this, "Seleccione una celda o una tabla.", "Color de celda",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                _dirty = true;
+            }
+            FocusEditor();
+        }
+
+        private void ClearCellColor()
+        {
+            if (!_editor.SetTableCellShading(null))
+            {
+                MessageBox.Show(this, "Seleccione una celda o una tabla.", "Color de celda",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            _dirty = true;
+            FocusEditor();
+        }
         private void ChooseColor()
         {
             bool cellEditing = _editor.IsEditingTableCell;

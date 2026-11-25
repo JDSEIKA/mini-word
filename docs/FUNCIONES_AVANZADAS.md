@@ -212,3 +212,8 @@ Las pruebas cubren:
 - El diálogo de inserción numera las filas y las columnas.
 - El contador inferior muestra cuántas filas y columnas se van a insertar.
 - Los números se actualizan al añadir o quitar filas/columnas.
+### Color de celda
+
+- **Tablas → Color de celda** abre el selector de color y aplica el fondo a la celda o al rango seleccionado.
+- **Sin color** quita el relleno.
+- El color se conserva al guardar en DOCX.

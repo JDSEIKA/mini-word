@@ -5190,6 +5190,53 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		public bool SetTableCellShading(Color? color)
+		{
+			if (_document == null) return false;
+			bool changed = false;
+			PushUndo();
+			if (IsEditingTableCell && _cellEdit != null && _cellEdit.Cell != null)
+			{
+				_cellEdit.Cell.Shading = color;
+				changed = true;
+			}
+			else if (_tableSelectionParagraph >= 0 && _tableSelectionParagraph < _document.Paragraphs.Count)
+			{
+				Paragraph table = _document.Paragraphs[_tableSelectionParagraph];
+				if (table.TableRows != null)
+				{
+					table.EnsureTableCells();
+					if (table.TableCells != null)
+					{
+						int row1 = Math.Min(_tableSelectionStartRow, _tableSelectionEndRow);
+						int row2 = Math.Max(_tableSelectionStartRow, _tableSelectionEndRow);
+						int col1 = Math.Min(_tableSelectionStartColumn, _tableSelectionEndColumn);
+						int col2 = Math.Max(_tableSelectionStartColumn, _tableSelectionEndColumn);
+						for (int r = Math.Max(0, row1); r <= row2 && r < table.TableCells.Length; r++)
+						{
+							if (table.TableCells[r] == null) continue;
+							for (int c = Math.Max(0, col1); c <= col2 && c < table.TableCells[r].Length; c++)
+							{
+								TableCell cell = table.TableCells[r][c];
+								if (cell == null || cell.Covered) continue;
+								cell.Shading = color;
+								changed = true;
+							}
+						}
+					}
+				}
+			}
+			if (!changed)
+			{
+				Undo();
+				return false;
+			}
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+
 		public bool ReplaceSpelling(SpellError error, string replacement)
 		{
 			if (error == null) return false;

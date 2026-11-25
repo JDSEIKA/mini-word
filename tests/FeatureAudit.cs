@@ -148,6 +148,7 @@ internal static class P
         TableCellRun secondCellRun = new TableCellRun("b", new RunFormat("Calibri", 22));
         secondCellRun.LinkUrl = "https://example.com";
         runCell.Alignment = ParagraphAlignment.Center;
+        runCell.Shading = Color.FromArgb(255, 242, 204);
         runCell.Runs.Add(firstCellRun); runCell.Runs.Add(secondCellRun); runCell.SyncFromRuns();
         tableRuns.Paragraphs.Add(tableRunsPara);
         tableRuns.Comments.Add(new DocumentComment
