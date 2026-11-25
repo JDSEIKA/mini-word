@@ -6,14 +6,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        Gracias por probar Mini Word 0.0.1 Beta. Cuanto más pequeño sea el documento de ejemplo, más fácil será corregir el fallo.
+        Gracias por probar Mini Word 0.0.16 Beta. Cuanto más pequeño sea el documento de ejemplo, más fácil será corregir el fallo.
         **No adjuntes documentos confidenciales.** Elimina o sustituye el contenido privado antes de compartirlo.
   - type: input
     id: version
     attributes:
       label: Versión de Mini Word
       description: Aparece en el título o en Ayuda/Acerca de.
-      placeholder: "0.0.1 Beta"
+      placeholder: "0.0.16 Beta"
     validations:
       required: true
   - type: input

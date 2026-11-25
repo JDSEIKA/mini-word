@@ -95,6 +95,7 @@ Los documentos `.doc` se abren en modo de importación. Al guardar, Mini Word av
 - Dictado y lectura en voz alta: [`docs/VOZ_DICTADO.md`](docs/VOZ_DICTADO.md).
 - Accesibilidad de comandos: [`docs/ACCESIBILIDAD_FUNCIONES.md`](docs/ACCESIBILIDAD_FUNCIONES.md).
 - Atajos de teclado: [`docs/ATAJOS_TECLADO.md`](docs/ATAJOS_TECLADO.md).
+- Versiones y notas: [`docs/RELEASES.md`](docs/RELEASES.md).
 - Re-auditoría 0.0.9: [`docs/REAUDITORIA_0.0.9.md`](docs/REAUDITORIA_0.0.9.md).
 - Auditoría de remediación 0.0.9: [`docs/AUDITORIA_0.0.9.md`](docs/AUDITORIA_0.0.9.md).
 - Auditoría estricta 2026-11-23: [`docs/AUDITORIA_2026-11-23.md`](docs/AUDITORIA_2026-11-23.md).

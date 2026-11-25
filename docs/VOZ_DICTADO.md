@@ -1,7 +1,7 @@
 # Dictado y lectura en voz alta
 
-Fecha: **2026-11-22**  
-Base: **Mini Word 0.0.5 Beta**
+Fecha: **2026-11-25**  
+Base: **Mini Word 0.0.16 Beta**
 
 ## Resumen
 

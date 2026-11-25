@@ -129,7 +129,7 @@ Las pruebas cubren:
 - Construcción de índice.
 - Aceptar/rechazar cambios.
 
-## Actualización 0.0.6: Fases A y B
+## Actualización funcional acumulada hasta 0.0.16
 
 ### Campos dinámicos
 

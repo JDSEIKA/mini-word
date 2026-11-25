@@ -1,5 +1,7 @@
 # Auditoría estricta — 2026-11-23
 
+> **Documento histórico.** La versión actual del proyecto es **0.0.16 Beta**; las versiones citadas pertenecen al alcance de este informe.
+
 Alcance: Mini Word 0.0.8 Beta, cambios de las Fases A/B y release 0.0.7.
 
 ## Método
