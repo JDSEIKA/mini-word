@@ -1,6 +1,6 @@
 # Estado de compatibilidad y visualización
 
-Fecha de la última auditoría funcional: **2026-11-25, 0.0.17 Beta**.
+Fecha de la última auditoría funcional: **2026-11-25, 0.0.18 Beta**.
 
 > **Estado 0.0.16:** ya existen campos PAGE/NUMPAGES, índice, control de cambios, comparación, estilos con nombre, respuestas de comentarios y tramos en celdas. La lista de pendientes de este documento es histórica y debe leerse con esa actualización.
 

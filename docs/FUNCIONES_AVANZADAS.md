@@ -207,3 +207,8 @@ Las pruebas cubren:
 - La revisión ortográfica incluye el texto de cada celda.
 - Las palabras dudosas se subrayan también dentro de la tabla.
 - El diálogo puede seleccionar una celda y reemplazar la palabra conservando el formato del tramo.
+### Creación de tablas
+
+- El diálogo de inserción numera las filas y las columnas.
+- El contador inferior muestra cuántas filas y columnas se van a insertar.
+- Los números se actualizan al añadir o quitar filas/columnas.

@@ -8,6 +8,7 @@ namespace WordPadClone.Dialogs
     internal sealed class TableEditorDialog : Form
     {
         private readonly DataGridView _grid;
+        private readonly Label _hint;
         public string[][] Rows;
         public bool DeleteTable;
 
@@ -27,7 +28,10 @@ namespace WordPadClone.Dialogs
             _grid.AllowUserToAddRows = false;
             _grid.AllowUserToDeleteRows = false;
             _grid.AllowUserToResizeRows = true;
-            _grid.RowHeadersWidth = 34;
+            _grid.RowHeadersWidth = 52;
+            _grid.RowHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            _grid.RowHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
+            _grid.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             _grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             _grid.BackgroundColor = Color.White;
             _grid.BorderStyle = BorderStyle.FixedSingle;
@@ -43,12 +47,16 @@ namespace WordPadClone.Dialogs
             Controls.Add(tools);
 
             Button addRow = MakeButton("Añadir fila", 12, 10);
-            addRow.Click += delegate { _grid.Rows.Add(); };
+            addRow.Click += delegate { _grid.Rows.Add(); UpdateLabels(); };
             tools.Controls.Add(addRow);
             Button delRow = MakeButton("Quitar fila", 120, 10);
             delRow.Click += delegate
             {
-                if (_grid.CurrentRow != null && _grid.Rows.Count > 1) _grid.Rows.Remove(_grid.CurrentRow);
+                if (_grid.CurrentRow != null && _grid.Rows.Count > 1)
+                {
+                    _grid.Rows.Remove(_grid.CurrentRow);
+                    UpdateLabels();
+                }
             };
             tools.Controls.Add(delRow);
             Button addCol = MakeButton("Añadir columna", 228, 10);
@@ -57,22 +65,27 @@ namespace WordPadClone.Dialogs
             {
                 int index = _grid.Columns.Add("c" + _grid.Columns.Count, "Columna " + (_grid.Columns.Count + 1));
                 _grid.Columns[index].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                UpdateLabels();
             };
             tools.Controls.Add(addCol);
             Button delCol = MakeButton("Quitar columna", 358, 10);
             delCol.Width = 124;
             delCol.Click += delegate
             {
-                if (_grid.CurrentCell != null && _grid.Columns.Count > 1) _grid.Columns.RemoveAt(_grid.CurrentCell.ColumnIndex);
+                if (_grid.CurrentCell != null && _grid.Columns.Count > 1)
+                {
+                    _grid.Columns.RemoveAt(_grid.CurrentCell.ColumnIndex);
+                    UpdateLabels();
+                }
             };
             tools.Controls.Add(delCol);
 
-            Label hint = new Label();
-            hint.Text = "Edite las celdas y use los botones para cambiar filas o columnas.";
-            hint.Location = new Point(12, 48);
-            hint.Size = new Size(420, 22);
-            hint.ForeColor = Color.FromArgb(90, 100, 110);
-            tools.Controls.Add(hint);
+            _hint = new Label();
+            _hint.Text = "Edite las celdas y use los botones para cambiar filas o columnas.";
+            _hint.Location = new Point(12, 48);
+            _hint.Size = new Size(420, 22);
+            _hint.ForeColor = Color.FromArgb(90, 100, 110);
+            tools.Controls.Add(_hint);
 
             Button ok = new Button();
             ok.Text = "Aceptar";
@@ -127,6 +140,7 @@ namespace WordPadClone.Dialogs
             for (int c = 0; c < columns; c++)
                 _grid.Columns.Add("c" + c, "Columna " + (c + 1));
             _grid.Rows.Add(rows);
+            UpdateLabels();
             if (source != null)
             {
                 for (int r = 0; r < source.Length; r++)
@@ -137,6 +151,14 @@ namespace WordPadClone.Dialogs
             }
             if (_grid.Rows.Count > 0 && _grid.Columns.Count > 0)
                 _grid.CurrentCell = _grid.Rows[0].Cells[0];
+        }
+
+        private void UpdateLabels()
+        {
+            for (int r = 0; r < _grid.Rows.Count; r++)
+                _grid.Rows[r].HeaderCell.Value = (r + 1).ToString();
+            _hint.Text = "Filas: " + _grid.Rows.Count + "  ·  Columnas: " + _grid.Columns.Count
+                + ". Edite las celdas con los botones inferiores.";
         }
 
         private void CaptureRows()
