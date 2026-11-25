@@ -1,7 +1,7 @@
 # Auditoría de funciones y accesibilidad
 
 Fecha: **2026-11-18**  
-Versión: **0.0.16 Beta**
+Versión: **0.0.17 Beta**
 
 Este documento revisa los comandos públicos del editor y comprueba si tienen un acceso visible en la cinta, un diálogo, el ratón o un atajo de teclado. No se consideran “inaccesibles” las funciones internas de maquetación, impresión o edición de celdas.
 

@@ -22,7 +22,7 @@ $shortcut.Description = "Mini Word"
 $shortcut.Save()
 
 Set-Content -LiteralPath (Join-Path $InstallDirectory "VERSION.txt") `
-    -Value "Mini Word 0.0.16 Beta (2026-11-25)" -Encoding UTF8
+    -Value "Mini Word 0.0.17 Beta (2026-11-25)" -Encoding UTF8
 
 Write-Host "Mini Word instalado en $InstallDirectory"
 Write-Host "Acceso directo: $shortcutPath"

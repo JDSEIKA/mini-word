@@ -188,6 +188,7 @@ namespace WordPadClone.Dialogs
                 if (resultVersion != _version || IsDisposed) return;
                 _checking = false;
                 _errors = errors ?? new List<SpellError>();
+                _editor.ResolveSpellTargets(_errors);
                 _index = 0;
                 ShowCurrent();
             });

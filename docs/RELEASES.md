@@ -1,11 +1,11 @@
-﻿# Versiones y notas de publicación
+# Versiones y notas de publicación
 
 ## Versión actual
 
-**Mini Word 0.0.16 Beta**
+**Mini Word 0.0.17 Beta**
 
 - Ejecutable: 467 KB.
-- Release: https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.16-beta
+- Release: https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.17-beta
 - Atajos: [`ATAJOS_TECLADO.md`](ATAJOS_TECLADO.md).
 - Alcance: [`BETA_SCOPE.md`](BETA_SCOPE.md).
 - Compatibilidad: [`COMPATIBILITY.md`](COMPATIBILITY.md).
