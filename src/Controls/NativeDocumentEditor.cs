@@ -5851,6 +5851,14 @@ namespace WordPadClone.Controls
 				_cellEditor.Font = new Font(FontResolver.Resolve("Calibri", "Español"), 11f);
 				_cellEditor.DetectUrls = false;
 				_cellEditor.HideSelection = false;
+				_cellEditor.ContextMenuStrip = new ContextMenuStrip();
+				_cellEditor.MouseUp += delegate(object sender, MouseEventArgs me)
+				{
+					if (me.Button == MouseButtons.Right && TableContextMenuRequested != null)
+					{
+						TableContextMenuRequested(_cellEditor.PointToScreen(me.Location));
+					}
+				};
 				_cellEditor.TextChanged += delegate
 				{
 					if (_cellEdit != null && !_suppressCellLeave && !_suppressCellFormatting)
