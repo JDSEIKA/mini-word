@@ -190,4 +190,4 @@ Las pruebas cubren:
 - Al editar una celda, los botones de alineación afectan a esa celda.
 - Se puede seleccionar parte del texto de una celda y aplicar fuente, tamaño, negrita, cursiva, subrayado o color.
 - El formato se guarda por tramos en DOCX; la alineación se guarda como `w:jc` en el párrafo de la celda.
-- **Limitación:** el editor de celda usa un `TextBox` superpuesto, por lo que el formato por palabra se ve al confirmar la celda; escribir de nuevo aplana los tramos.
+- **Vista previa:** el editor de celda usa un `RichTextBox` superpuesto; los cambios de fuente, tamaño, color, negrita y alineación se ven mientras se edita. La tabla de fondo también se actualiza. Escribir texto nuevo aplana los tramos del modelo hasta el siguiente formateo.

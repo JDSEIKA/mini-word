@@ -346,7 +346,7 @@ namespace WordPadClone.Controls
 
 		private string _spellLanguage = "es-MX";
 
-		private TextBox _cellEditor;
+		private RichTextBox _cellEditor;
 
 		private LayoutTableCell _cellEdit;
 
@@ -369,6 +369,7 @@ namespace WordPadClone.Controls
 		private int _cellEditParagraph = -1;
 
 		private bool _suppressCellLeave;
+		private bool _suppressCellFormatting;
 
 		private bool _suppressCellCommit;
 
@@ -5451,18 +5452,18 @@ namespace WordPadClone.Controls
 			CommitCellEditor(false);
 			if (_cellEditor == null)
 			{
-				_cellEditor = new TextBox();
+				_cellEditor = new RichTextBox();
 				_cellEditor.Multiline = true;
-				_cellEditor.AcceptsReturn = true;
 				_cellEditor.WordWrap = true;
-				_cellEditor.ScrollBars = ScrollBars.None;
+				_cellEditor.ScrollBars = RichTextBoxScrollBars.None;
 				_cellEditor.BorderStyle = BorderStyle.None;
 				_cellEditor.BackColor = Color.White;
 				_cellEditor.ForeColor = Color.Black;
 				_cellEditor.Font = new Font(FontResolver.Resolve("Calibri", "Español"), 11f);
+				_cellEditor.DetectUrls = false;
 				_cellEditor.TextChanged += delegate
 				{
-					if (_cellEdit != null && !_suppressCellLeave)
+					if (_cellEdit != null && !_suppressCellLeave && !_suppressCellFormatting)
 					{
 						_cellEdit.Cell.Text = _cellEditor.Text;
 						_cellEdit.Cell.Runs.Clear();
@@ -7354,6 +7355,7 @@ namespace WordPadClone.Controls
 			cell.Runs.Clear();
 			cell.Runs.AddRange(result);
 			cell.SyncFromRuns();
+			UpdateCellEditorStyle();
 			InvalidateLayout(true);
 			OnTextChanged();
 			OnSelectionChanged();
@@ -7437,29 +7439,59 @@ namespace WordPadClone.Controls
 
 		private void UpdateCellEditorStyle()
 		{
-			if (!IsEditingTableCell) return;
+			if (!IsEditingTableCell || _cellEditor == null || _cellEdit == null || _cellEdit.Cell == null) return;
 			int start = _cellEditor.SelectionStart;
 			int length = _cellEditor.SelectionLength;
-			_cellEditor.TextAlign = _cellEdit.Cell.Alignment == ParagraphAlignment.Center
-				? HorizontalAlignment.Center
-				: _cellEdit.Cell.Alignment == ParagraphAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;
-			RunFormat format = _cellEdit.Cell.Format;
-			if (format == null) return;
+			_cellEditor.SuspendLayout();
+			_suppressCellFormatting = true;
 			try
 			{
-				FontStyle style = FontStyle.Regular;
-				if (format.Bold) style |= FontStyle.Bold;
-				if (format.Italic) style |= FontStyle.Italic;
-				if (format.Underline) style |= FontStyle.Underline;
-				_cellEditor.Font = new Font(format.FontFamily,
-					Math.Max(6f, Math.Min(96f, format.SizeHalfPoints / 2f * _zoom)), style);
-				_cellEditor.ForeColor = format.ForeColor ?? Color.Black;
-				_cellEditor.SelectionStart = start;
-				_cellEditor.SelectionLength = length;
+				TableCell cell = _cellEdit.Cell;
+				RunFormat baseFormat = cell.Format == null
+					? new RunFormat("Calibri", 21) { Bold = cell.Bold, Italic = cell.Italic }
+					: cell.Format.Clone();
+				_cellEditor.SelectAll();
+				_cellEditor.SelectionFont = EditorFont(baseFormat);
+				_cellEditor.SelectionColor = baseFormat.ForeColor ?? Color.Black;
+				_cellEditor.SelectionAlignment = cell.Alignment == ParagraphAlignment.Center
+					? HorizontalAlignment.Center
+					: cell.Alignment == ParagraphAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+				cell.EnsureRuns();
+				int offset = 0;
+				for (int i = 0; i < cell.Runs.Count; i++)
+				{
+					TableCellRun run = cell.Runs[i];
+					if (run == null || string.IsNullOrEmpty(run.Text)) continue;
+					_cellEditor.Select(offset, run.Text.Length);
+					if (run.Format != null)
+					{
+						_cellEditor.SelectionFont = EditorFont(run.Format);
+						_cellEditor.SelectionColor = run.Format.ForeColor ?? Color.Black;
+					}
+					offset += run.Text.Length;
+				}
+				int textLength = _cellEditor.TextLength;
+				_cellEditor.SelectionStart = Math.Max(0, Math.Min(textLength, start));
+				_cellEditor.SelectionLength = Math.Max(0, Math.Min(textLength - _cellEditor.SelectionStart, length));
 			}
 			catch
 			{
 			}
+			finally
+			{
+				_suppressCellFormatting = false;
+				_cellEditor.ResumeLayout();
+			}
+		}
+
+		private Font EditorFont(RunFormat format)
+		{
+			FontStyle style = FontStyle.Regular;
+			if (format.Bold) style |= FontStyle.Bold;
+			if (format.Italic) style |= FontStyle.Italic;
+			if (format.Underline) style |= FontStyle.Underline;
+			return new Font(FontResolver.Resolve(format.FontFamily, "Español"),
+				Math.Max(6f, Math.Min(96f, format.SizeHalfPoints / 2f * _zoom)), style);
 		}
 
 		private bool ApplySelectionRunChange(Action<RunFormat> change)
