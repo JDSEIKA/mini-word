@@ -196,3 +196,9 @@ Las pruebas cubren:
 - La altura de la fila se calcula con el mayor tamaño de letra de todos los tramos, no solo con el primer tramo.
 - Los tramos de distinto tamaño se alinean por la línea base, no por el borde superior.
 - Cambiar el tamaño de la última palabra también amplía la celda.
+### Ajuste y recorte en celdas
+
+- El texto de una celda se recorta a los límites de la celda: no invade columnas vecinas.
+- Las palabras largas se parten por caracteres cuando no caben.
+- La altura de la fila cuenta las líneas necesarias, no solo una.
+- Los tramos de distinto tamaño comparten línea base.

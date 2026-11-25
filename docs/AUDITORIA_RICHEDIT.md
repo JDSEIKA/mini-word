@@ -1,7 +1,7 @@
 # Auditoría: código RichEdit / “Rift Edit”
 
 Fecha: **2026-11-18**  
-Versión: **0.0.14 Beta**
+Versión: **0.0.15 Beta**
 
 ## Búsqueda realizada
 

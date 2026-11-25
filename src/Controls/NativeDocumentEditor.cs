@@ -1923,7 +1923,8 @@ namespace WordPadClone.Controls
 				{
 					TableCell cell = row[c];
 					if (cell == null || cell.Covered) continue;
-					float lineHeight = CellLineHeight(cell);
+					float cellWidth = num3 * (float)Math.Max(1, Math.Min(cell.ColSpan, num - c));
+					float lineHeight = CellTextHeight(cell, cellWidth);
 					if (lineHeight <= 0f) lineHeight = num4 - 8f;
 					rowHeights[r] = Math.Max(rowHeights[r], lineHeight + 8f);
 				}
@@ -2634,10 +2635,14 @@ namespace WordPadClone.Controls
 						{
 							g.DrawRectangle(pen2, rect.X, rect.Y, rect.Width, rect.Height);
 						}
-						if (layoutTableCell.Cell != null && layoutTableCell.Cell.Runs.Count > 0)
+						if (layoutTableCell.Cell != null)
 						{
-							DrawCellRuns(g, layoutTableCell, stringFormat);
-							continue;
+							layoutTableCell.Cell.EnsureRuns();
+							if (layoutTableCell.Cell.Runs.Count > 0)
+							{
+								DrawCellRuns(g, layoutTableCell, stringFormat);
+								continue;
+							}
 						}
 						if (layoutTableCell.Cell != null && !string.IsNullOrEmpty(layoutTableCell.Cell.Text))
 						{
@@ -2678,11 +2683,15 @@ namespace WordPadClone.Controls
 			}
 		}
 
-		private float CellLineHeight(TableCell cell)
+		private float CellTextHeight(TableCell cell, float width)
 		{
-			float height = 0f;
-			if (cell == null) return height;
+			if (cell == null) return 0f;
 			cell.EnsureRuns();
+			float available = Math.Max(8f, width - 8f);
+			float maxFontHeight = 0f;
+			float x = 0f;
+			int lines = 1;
+			Graphics graphics = _layoutGraphics;
 			for (int i = 0; i < cell.Runs.Count; i++)
 			{
 				TableCellRun run = cell.Runs[i];
@@ -2690,14 +2699,34 @@ namespace WordPadClone.Controls
 				RunFormat format = run.Format ?? cell.Format;
 				if (format == null) continue;
 				Font font = GetFont(format);
-				height = Math.Max(height, _layoutGraphics != null ? font.GetHeight(_layoutGraphics) : font.GetHeight());
+				float fontHeight = graphics != null ? font.GetHeight(graphics) : font.GetHeight();
+				maxFontHeight = Math.Max(maxFontHeight, fontHeight);
+				string text = run.Text.Replace("\r", string.Empty);
+				for (int j = 0; j < text.Length; j++)
+				{
+					if (text[j] == '\n')
+					{
+						lines++;
+						x = 0f;
+						continue;
+					}
+					float charWidth = graphics != null
+						? graphics.MeasureString(text[j].ToString(), font).Width
+						: text[j].ToString().Length * font.Size * 0.55f;
+					if (x > 0f && x + charWidth > available)
+					{
+						lines++;
+						x = 0f;
+					}
+					x += charWidth;
+				}
 			}
-			if (height <= 0f && cell.Format != null)
+			if (maxFontHeight <= 0f && cell.Format != null)
 			{
 				Font font = GetFont(cell.Format);
-				height = _layoutGraphics != null ? font.GetHeight(_layoutGraphics) : font.GetHeight();
+				maxFontHeight = graphics != null ? font.GetHeight(graphics) : font.GetHeight();
 			}
-			return height;
+			return maxFontHeight * Math.Max(1, lines) + (lines - 1);
 		}
 
 		private static float FontAscent(Font font)
@@ -2712,6 +2741,7 @@ namespace WordPadClone.Controls
 			float left = cell.X + 4f;
 			float top = cell.Y + 3f;
 			float right = cell.X + Math.Max(1f, cell.Width - 8f);
+			float bottom = cell.Y + Math.Max(1f, cell.Height - 3f);
 			cell.Cell.EnsureRuns();
 			float totalWidth = 0f;
 			float maxAscent = 0f;
@@ -2737,45 +2767,72 @@ namespace WordPadClone.Controls
 					: right - totalWidth;
 				if (startX < left) startX = left;
 			}
-			float x = startX;
-			float lineTop = top;
-			for (int i = 0; i < cell.Cell.Runs.Count; i++)
+			GraphicsState state = g.Save();
+			try
 			{
-				TableCellRun run = cell.Cell.Runs[i];
-				if (run == null || string.IsNullOrEmpty(run.Text)) continue;
-				RunFormat runFormat = run.Format ?? cell.Cell.Format ?? new RunFormat("Calibri", 21);
-				Font font = GetFont(runFormat);
-				float ascent = FontAscent(font);
-				Color color = string.IsNullOrEmpty(run.LinkUrl) ? (runFormat.ForeColor ?? Color.Black)
-					: Color.FromArgb(0, 82, 204);
-				string[] lines = run.Text.Replace("\r", string.Empty).Split('\n');
-				for (int line = 0; line < lines.Length; line++)
+				g.SetClip(new RectangleF(cell.X + 1f, cell.Y + 1f,
+					Math.Max(1f, cell.Width - 2f), Math.Max(1f, cell.Height - 2f)), CombineMode.Intersect);
+				float x = startX;
+				float lineTop = top;
+				for (int i = 0; i < cell.Cell.Runs.Count; i++)
 				{
-					string part = lines[line];
-					if (part.Length > 0)
+					TableCellRun run = cell.Cell.Runs[i];
+					if (run == null || string.IsNullOrEmpty(run.Text)) continue;
+					RunFormat runFormat = run.Format ?? cell.Cell.Format ?? new RunFormat("Calibri", 21);
+					Font font = GetFont(runFormat);
+					float ascent = FontAscent(font);
+					Color color = string.IsNullOrEmpty(run.LinkUrl) ? (runFormat.ForeColor ?? Color.Black)
+						: Color.FromArgb(0, 82, 204);
+					string text = run.Text.Replace("\r", string.Empty);
+					int index = 0;
+					while (index < text.Length)
 					{
-						SizeF size = g.MeasureString(part, font);
-						if (x > startX && x + size.Width > right)
+						if (text[index] == '\n')
 						{
 							x = startX;
 							lineTop += lineHeight + 1f;
+							index++;
+							continue;
 						}
+						int end = index;
+						float width = 0f;
+						while (end < text.Length && text[end] != '\n')
+						{
+							float candidate = g.MeasureString(text.Substring(index, end - index + 1), font).Width;
+							if (end > index && x + candidate > right) break;
+							width = candidate;
+							end++;
+						}
+						if (end == index)
+						{
+							string single = text[index].ToString();
+							width = g.MeasureString(single, font).Width;
+							end = index + 1;
+						}
+						string part = text.Substring(index, end - index);
 						float drawY = lineTop + maxAscent - ascent;
 						using (Brush brush = new SolidBrush(color))
 							g.DrawString(part, font, brush, x, drawY, format);
 						if (!string.IsNullOrEmpty(run.LinkUrl))
 						{
 							using (Pen linkPen = new Pen(color))
-								g.DrawLine(linkPen, x, drawY + size.Height, x + size.Width, drawY + size.Height);
+								g.DrawLine(linkPen, x, drawY + font.GetHeight(g), x + width, drawY + font.GetHeight(g));
 						}
-						x += size.Width;
+						x += width;
+						index = end;
+						if (index < text.Length && text[index] != '\n' && x >= right)
+						{
+							x = startX;
+							lineTop += lineHeight + 1f;
+						}
+						if (lineTop > bottom) break;
 					}
-					if (line < lines.Length - 1)
-					{
-						x = startX;
-						lineTop += lineHeight + 1f;
-					}
+					if (lineTop > bottom) break;
 				}
+			}
+			finally
+			{
+				g.Restore(state);
 			}
 		}
 		private void DrawSpellingHighlight(Graphics g, LayoutPage page)

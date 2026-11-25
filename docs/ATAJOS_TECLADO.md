@@ -1,7 +1,7 @@
 # Atajos de teclado
 
 Fecha: 2026-11-24  
-Versión: 0.0.14 Beta
+Versión: 0.0.15 Beta
 
 ## Archivo y edición
 
