@@ -1922,9 +1922,9 @@ namespace WordPadClone.Controls
 				for (int c = 0; c < row.Length; c++)
 				{
 					TableCell cell = row[c];
-					if (cell == null || cell.Covered || cell.Format == null) continue;
-					Font cellFont = GetFont(cell.Format);
-					float lineHeight = _layoutGraphics != null ? cellFont.GetHeight(_layoutGraphics) : num4 - 8f;
+					if (cell == null || cell.Covered) continue;
+					float lineHeight = CellLineHeight(cell);
+					if (lineHeight <= 0f) lineHeight = num4 - 8f;
 					rowHeights[r] = Math.Max(rowHeights[r], lineHeight + 8f);
 				}
 			}
@@ -2678,24 +2678,57 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		private float CellLineHeight(TableCell cell)
+		{
+			float height = 0f;
+			if (cell == null) return height;
+			cell.EnsureRuns();
+			for (int i = 0; i < cell.Runs.Count; i++)
+			{
+				TableCellRun run = cell.Runs[i];
+				if (run == null || string.IsNullOrEmpty(run.Text)) continue;
+				RunFormat format = run.Format ?? cell.Format;
+				if (format == null) continue;
+				Font font = GetFont(format);
+				height = Math.Max(height, _layoutGraphics != null ? font.GetHeight(_layoutGraphics) : font.GetHeight());
+			}
+			if (height <= 0f && cell.Format != null)
+			{
+				Font font = GetFont(cell.Format);
+				height = _layoutGraphics != null ? font.GetHeight(_layoutGraphics) : font.GetHeight();
+			}
+			return height;
+		}
+
+		private static float FontAscent(Font font)
+		{
+			if (font == null) return 0f;
+			return font.FontFamily.GetCellAscent(font.Style) * font.Size / font.FontFamily.GetEmHeight(font.Style);
+		}
+
 		private void DrawCellRuns(Graphics g, LayoutTableCell cell, StringFormat format)
 		{
 			if (cell == null || cell.Cell == null) return;
 			float left = cell.X + 4f;
 			float top = cell.Y + 3f;
 			float right = cell.X + Math.Max(1f, cell.Width - 8f);
-			float x = left;
-			float y = top;
 			cell.Cell.EnsureRuns();
 			float totalWidth = 0f;
+			float maxAscent = 0f;
+			float lineHeight = 0f;
 			for (int i = 0; i < cell.Cell.Runs.Count; i++)
 			{
 				TableCellRun measureRun = cell.Cell.Runs[i];
 				if (measureRun == null || string.IsNullOrEmpty(measureRun.Text)) continue;
 				RunFormat measureFormat = measureRun.Format ?? cell.Cell.Format ?? new RunFormat("Calibri", 21);
-				string measureText = measureRun.Text.Replace("\r", string.Empty).Replace("\n", string.Empty);
-				totalWidth += g.MeasureString(measureText, GetFont(measureFormat)).Width;
+				Font measureFont = GetFont(measureFormat);
+				maxAscent = Math.Max(maxAscent, FontAscent(measureFont));
+				lineHeight = Math.Max(lineHeight, measureFont.GetHeight(g));
+				string[] measureLines = measureRun.Text.Replace("\r", string.Empty).Split('\n');
+				for (int line = 0; line < measureLines.Length; line++)
+					totalWidth += g.MeasureString(measureLines[line], measureFont).Width;
 			}
+			if (lineHeight <= 0f) lineHeight = GetFont(new RunFormat("Calibri", 21)).GetHeight(g);
 			float startX = left;
 			if (totalWidth < right - left && cell.Cell.Alignment != ParagraphAlignment.Left)
 			{
@@ -2703,14 +2736,16 @@ namespace WordPadClone.Controls
 					? left + (right - left - totalWidth) / 2f
 					: right - totalWidth;
 				if (startX < left) startX = left;
-				x = startX;
 			}
+			float x = startX;
+			float lineTop = top;
 			for (int i = 0; i < cell.Cell.Runs.Count; i++)
 			{
 				TableCellRun run = cell.Cell.Runs[i];
 				if (run == null || string.IsNullOrEmpty(run.Text)) continue;
 				RunFormat runFormat = run.Format ?? cell.Cell.Format ?? new RunFormat("Calibri", 21);
 				Font font = GetFont(runFormat);
+				float ascent = FontAscent(font);
 				Color color = string.IsNullOrEmpty(run.LinkUrl) ? (runFormat.ForeColor ?? Color.Black)
 					: Color.FromArgb(0, 82, 204);
 				string[] lines = run.Text.Replace("\r", string.Empty).Split('\n');
@@ -2720,24 +2755,25 @@ namespace WordPadClone.Controls
 					if (part.Length > 0)
 					{
 						SizeF size = g.MeasureString(part, font);
-						if (x > left && x + size.Width > right)
+						if (x > startX && x + size.Width > right)
 						{
 							x = startX;
-							y += font.GetHeight(g) + 1f;
+							lineTop += lineHeight + 1f;
 						}
+						float drawY = lineTop + maxAscent - ascent;
 						using (Brush brush = new SolidBrush(color))
-							g.DrawString(part, font, brush, x, y, format);
+							g.DrawString(part, font, brush, x, drawY, format);
 						if (!string.IsNullOrEmpty(run.LinkUrl))
 						{
 							using (Pen linkPen = new Pen(color))
-								g.DrawLine(linkPen, x, y + size.Height, x + size.Width, y + size.Height);
+								g.DrawLine(linkPen, x, drawY + size.Height, x + size.Width, drawY + size.Height);
 						}
 						x += size.Width;
 					}
 					if (line < lines.Length - 1)
 					{
 						x = startX;
-						y += font.GetHeight(g) + 1f;
+						lineTop += lineHeight + 1f;
 					}
 				}
 			}
@@ -7358,8 +7394,14 @@ namespace WordPadClone.Controls
 			cell.Runs.Clear();
 			cell.Runs.AddRange(result);
 			cell.SyncFromRuns();
+			int paragraph = _cellEditParagraph;
+			int row = _cellEdit.Row;
+			int column = _cellEdit.Column;
+			int selectionStart = _cellEditor.SelectionStart;
+			int selectionLength = _cellEditor.SelectionLength;
 			UpdateCellEditorStyle();
 			InvalidateLayout(true);
+			RefreshCellEditorLayout(paragraph, row, column, selectionStart, selectionLength);
 			OnTextChanged();
 			OnSelectionChanged();
 			return true;

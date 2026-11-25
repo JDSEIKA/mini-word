@@ -69,6 +69,18 @@ internal static class P
             object alignment = cellModel.GetType().GetField("Alignment").GetValue(cellModel);
             if (alignment.ToString() != "Center") throw new Exception("cell alignment not applied");
 
+            object editedCell = typeof(NativeDocumentEditor).GetField("_cellEdit",
+                BindingFlags.NonPublic | BindingFlags.Instance).GetValue(editor);
+            float heightBefore = (float)editedCell.GetType().GetField("Height").GetValue(editedCell);
+            box.SelectionStart = 4;
+            box.SelectionLength = 3;
+            editor.SetFontSize(36f);
+            Application.DoEvents();
+            editedCell = typeof(NativeDocumentEditor).GetField("_cellEdit",
+                BindingFlags.NonPublic | BindingFlags.Instance).GetValue(editor);
+            float heightAfter = (float)editedCell.GetType().GetField("Height").GetValue(editedCell);
+            if (heightAfter <= heightBefore) throw new Exception("cell height did not grow for last word");
+
             Console.WriteLine("CELL_FOCUS_SMOKE=PASS");
         }
         finally

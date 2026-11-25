@@ -191,3 +191,8 @@ Las pruebas cubren:
 - Se puede seleccionar parte del texto de una celda y aplicar fuente, tamaño, negrita, cursiva, subrayado o color.
 - El formato se guarda por tramos en DOCX; la alineación se guarda como `w:jc` en el párrafo de la celda.
 - **Vista previa:** el editor de celda usa un `RichTextBox` superpuesto; los cambios de fuente, tamaño, color, negrita y alineación se ven mientras se edita. La tabla de fondo también se actualiza. Escribir texto nuevo aplana los tramos del modelo hasta el siguiente formateo.
+### Varios tamaños en una celda
+
+- La altura de la fila se calcula con el mayor tamaño de letra de todos los tramos, no solo con el primer tramo.
+- Los tramos de distinto tamaño se alinean por la línea base, no por el borde superior.
+- Cambiar el tamaño de la última palabra también amplía la celda.
