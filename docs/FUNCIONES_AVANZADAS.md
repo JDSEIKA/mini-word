@@ -184,3 +184,10 @@ Las pruebas cubren:
 - **Revisar → Comentarios** permite responder y marcar como resuelto.
 - Las respuestas se guardan como párrafos adicionales en `comments.xml`.
 - El estado resuelto es local; Word no lo conserva como estado nativo.
+### Alineación y formato por palabra en celdas
+
+- Cada celda conserva alineación izquierda, centrada, derecha o justificada.
+- Al editar una celda, los botones de alineación afectan a esa celda.
+- Se puede seleccionar parte del texto de una celda y aplicar fuente, tamaño, negrita, cursiva, subrayado o color.
+- El formato se guarda por tramos en DOCX; la alineación se guarda como `w:jc` en el párrafo de la celda.
+- **Limitación:** el editor de celda usa un `TextBox` superpuesto, por lo que el formato por palabra se ve al confirmar la celda; escribir de nuevo aplana los tramos.

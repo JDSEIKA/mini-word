@@ -143,10 +143,11 @@ internal static class P
         tableRunsPara.EnsureTableCells();
         TableCell runCell = tableRunsPara.TableCells[0][0];
         runCell.Runs.Clear();
-        RunFormat boldRun = new RunFormat("Calibri", 22); boldRun.Bold = true;
+        RunFormat boldRun = new RunFormat("Calibri", 22); boldRun.Bold = true; boldRun.ForeColor = Color.Red;
         TableCellRun firstCellRun = new TableCellRun("a", boldRun);
         TableCellRun secondCellRun = new TableCellRun("b", new RunFormat("Calibri", 22));
         secondCellRun.LinkUrl = "https://example.com";
+        runCell.Alignment = ParagraphAlignment.Center;
         runCell.Runs.Add(firstCellRun); runCell.Runs.Add(secondCellRun); runCell.SyncFromRuns();
         tableRuns.Paragraphs.Add(tableRunsPara);
         tableRuns.Comments.Add(new DocumentComment

@@ -561,6 +561,8 @@ namespace WordPadClone.Controls
 		{
 			get
 			{
+				if (IsEditingTableCell && _cellEdit != null && _cellEdit.Cell != null)
+					return _cellEdit.Cell.Alignment;
 				EnsureParagraphs();
 				int index = Math.Max(0, Math.Min(_caret.P, _document.Paragraphs.Count - 1));
 				return _document.Paragraphs[index].Alignment;
@@ -2653,8 +2655,13 @@ namespace WordPadClone.Controls
 							Color cellColor = cellLink ? Color.FromArgb(0, 82, 204)
 								: (cellFormat.ForeColor ?? Color.Black);
 							using (Brush cellText = new SolidBrush(cellColor))
+							using (StringFormat cellStringFormat = (StringFormat)stringFormat.Clone())
 							{
-								g.DrawString(layoutTableCell.Cell.Text, font2, cellText, layoutRectangle, stringFormat);
+								cellStringFormat.Alignment = layoutTableCell.Cell.Alignment == ParagraphAlignment.Center
+									? StringAlignment.Center
+									: layoutTableCell.Cell.Alignment == ParagraphAlignment.Right
+										? StringAlignment.Far : StringAlignment.Near;
+								g.DrawString(layoutTableCell.Cell.Text, font2, cellText, layoutRectangle, cellStringFormat);
 								if (cellLink)
 								{
 									SizeF measured = g.MeasureString(layoutTableCell.Cell.Text, font2);
@@ -2679,6 +2686,24 @@ namespace WordPadClone.Controls
 			float x = left;
 			float y = top;
 			cell.Cell.EnsureRuns();
+			float totalWidth = 0f;
+			for (int i = 0; i < cell.Cell.Runs.Count; i++)
+			{
+				TableCellRun measureRun = cell.Cell.Runs[i];
+				if (measureRun == null || string.IsNullOrEmpty(measureRun.Text)) continue;
+				RunFormat measureFormat = measureRun.Format ?? cell.Cell.Format ?? new RunFormat("Calibri", 21);
+				string measureText = measureRun.Text.Replace("\r", string.Empty).Replace("\n", string.Empty);
+				totalWidth += g.MeasureString(measureText, GetFont(measureFormat)).Width;
+			}
+			float startX = left;
+			if (totalWidth < right - left && cell.Cell.Alignment != ParagraphAlignment.Left)
+			{
+				startX = cell.Cell.Alignment == ParagraphAlignment.Center
+					? left + (right - left - totalWidth) / 2f
+					: right - totalWidth;
+				if (startX < left) startX = left;
+				x = startX;
+			}
 			for (int i = 0; i < cell.Cell.Runs.Count; i++)
 			{
 				TableCellRun run = cell.Cell.Runs[i];
@@ -2696,7 +2721,7 @@ namespace WordPadClone.Controls
 						SizeF size = g.MeasureString(part, font);
 						if (x > left && x + size.Width > right)
 						{
-							x = left;
+							x = startX;
 							y += font.GetHeight(g) + 1f;
 						}
 						using (Brush brush = new SolidBrush(color))
@@ -2710,7 +2735,7 @@ namespace WordPadClone.Controls
 					}
 					if (line < lines.Length - 1)
 					{
-						x = left;
+						x = startX;
 						y += font.GetHeight(g) + 1f;
 					}
 				}
@@ -7282,11 +7307,66 @@ namespace WordPadClone.Controls
 			if (IsEditingTableCell) _cellEditor.Focus();
 		}
 
+		private bool ApplyCellRunChange(int start, int length, Action<RunFormat> change)
+		{
+			if (_cellEdit == null || _cellEdit.Cell == null || change == null) return false;
+			TableCell cell = _cellEdit.Cell;
+			cell.EnsureRuns();
+			if (start < 0) start = 0;
+			int end = Math.Min(cell.Text == null ? 0 : cell.Text.Length, start + length);
+			if (start >= end) return false;
+			int offset = 0;
+			List<TableCellRun> result = new List<TableCellRun>();
+			for (int i = 0; i < cell.Runs.Count; i++)
+			{
+				TableCellRun run = cell.Runs[i];
+				int runLength = run.Text.Length;
+				int localStart = Math.Max(0, start - offset);
+				int localEnd = Math.Min(runLength, end - offset);
+				if (localEnd <= localStart)
+				{
+					result.Add(run);
+				}
+				else
+				{
+					if (localStart > 0)
+					{
+						TableCellRun prefix = run.Clone();
+						prefix.Text = run.Text.Substring(0, localStart);
+						if (prefix.Format == null) prefix.Format = new RunFormat("Calibri", 21);
+						result.Add(prefix);
+					}
+					TableCellRun selected = run.Clone();
+					selected.Text = run.Text.Substring(localStart, localEnd - localStart);
+					if (selected.Format == null) selected.Format = new RunFormat("Calibri", 21);
+					change(selected.Format);
+					result.Add(selected);
+					if (localEnd < runLength)
+					{
+						TableCellRun suffix = run.Clone();
+						suffix.Text = run.Text.Substring(localEnd);
+						if (suffix.Format == null) suffix.Format = new RunFormat("Calibri", 21);
+						result.Add(suffix);
+					}
+				}
+				offset += runLength;
+			}
+			cell.Runs.Clear();
+			cell.Runs.AddRange(result);
+			cell.SyncFromRuns();
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+
 		private bool ApplyContextFormat(Action<RunFormat> change)
 		{
 			if (change == null) return false;
 			if (IsEditingTableCell)
 			{
+				if (_cellEditor != null && _cellEditor.SelectionLength > 0)
+					return ApplyCellRunChange(_cellEditor.SelectionStart, _cellEditor.SelectionLength, change);
 				TableCell cell = _cellEdit.Cell;
 				RunFormat format = cell.Format == null
 					? new RunFormat("Calibri", 21) { Bold = cell.Bold, Italic = cell.Italic }
@@ -7360,6 +7440,9 @@ namespace WordPadClone.Controls
 			if (!IsEditingTableCell) return;
 			int start = _cellEditor.SelectionStart;
 			int length = _cellEditor.SelectionLength;
+			_cellEditor.TextAlign = _cellEdit.Cell.Alignment == ParagraphAlignment.Center
+				? HorizontalAlignment.Center
+				: _cellEdit.Cell.Alignment == ParagraphAlignment.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left;
 			RunFormat format = _cellEdit.Cell.Format;
 			if (format == null) return;
 			try
@@ -7768,6 +7851,17 @@ namespace WordPadClone.Controls
 
 		public void SetAlignment(ParagraphAlignment alignment)
 		{
+			if (IsEditingTableCell && _cellEdit != null && _cellEdit.Cell != null)
+			{
+				PushUndo();
+				_cellEdit.Cell.Alignment = alignment;
+				RefreshCellEditorLayout(_cellEditParagraph, _cellEdit.Row, _cellEdit.Column,
+					_cellEditor.SelectionStart, _cellEditor.SelectionLength);
+				InvalidateLayout(true);
+				OnTextChanged();
+				OnSelectionChanged();
+				return;
+			}
 			PushUndo();
 			CaretPos start;
 			CaretPos end;

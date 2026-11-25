@@ -920,6 +920,17 @@ namespace WordPadClone.Formats
             }
             w.WriteEndElement();
             w.WriteStartElement("w", "p", W.NamespaceName);
+            if (cell != null && cell.Alignment != ParagraphAlignment.Left)
+            {
+                w.WriteStartElement("w", "pPr", W.NamespaceName);
+                w.WriteStartElement("w", "jc", W.NamespaceName);
+                w.WriteAttributeString("w", "val", W.NamespaceName,
+                    cell.Alignment == ParagraphAlignment.Center ? "center"
+                    : cell.Alignment == ParagraphAlignment.Right ? "right"
+                    : cell.Alignment == ParagraphAlignment.Justify ? "both" : "left");
+                w.WriteEndElement();
+                w.WriteEndElement();
+            }
             if (!verticalContinue && cell != null && cell.Runs.Count > 0)
             {
                 for (int ri = 0; ri < cell.Runs.Count; ri++)
@@ -3581,6 +3592,13 @@ namespace WordPadClone.Formats
                         }
                         TableCell cell = new TableCell();
                         cell.Text = cellText.ToString();
+                        XElement cellParagraph = tc.Elements(W + "p").FirstOrDefault();
+                        XElement cellPPr = cellParagraph != null ? cellParagraph.Element(W + "pPr") : null;
+                        XElement cellJc = cellPPr != null ? cellPPr.Element(W + "jc") : null;
+                        string cellAlign = cellJc != null ? (string)cellJc.Attribute(W + "val") : null;
+                        if (string.Equals(cellAlign, "center", StringComparison.OrdinalIgnoreCase)) cell.Alignment = ParagraphAlignment.Center;
+                        else if (string.Equals(cellAlign, "right", StringComparison.OrdinalIgnoreCase)) cell.Alignment = ParagraphAlignment.Right;
+                        else if (string.Equals(cellAlign, "both", StringComparison.OrdinalIgnoreCase) || string.Equals(cellAlign, "justify", StringComparison.OrdinalIgnoreCase)) cell.Alignment = ParagraphAlignment.Justify;
                         ReadTableCellRuns(tc, cell);
                         cell.ColSpan = gridSpan;
                         XElement cellLink = tc.Descendants(W + "hyperlink").FirstOrDefault();

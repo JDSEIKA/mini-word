@@ -391,7 +391,7 @@ namespace WordPadClone.Formats
         public void EnsureRuns()
         {
             if (Runs.Count > 0 || string.IsNullOrEmpty(Text)) return;
-            Runs.Add(new TableCellRun(Text, Format));
+            Runs.Add(new TableCellRun(Text, Format ?? new RunFormat("Calibri", 21)));
             Runs[0].LinkUrl = LinkUrl;
         }
 
@@ -428,6 +428,7 @@ namespace WordPadClone.Formats
         public bool Italic;
         public string LinkUrl;
         public RunFormat Format;
+        public ParagraphAlignment Alignment = ParagraphAlignment.Left;
 
         public TableCell Clone()
         {
@@ -443,6 +444,7 @@ namespace WordPadClone.Formats
                 Bold = Bold,
                 Italic = Italic,
                 LinkUrl = LinkUrl,
+                Alignment = Alignment,
                 Format = Format == null ? null : Format.Clone()
             };
             for (int i = 0; i < Runs.Count; i++) copy.Runs.Add(Runs[i].Clone());

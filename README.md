@@ -2,26 +2,26 @@
 
 Procesador de textos de escritorio para Windows con un **motor tipográfico propio**, edición nativa de DOCX y una interfaz inspirada en Microsoft Word. No usa Word, Office, LibreOffice, RichEdit en la vista principal, NuGet ni bibliotecas externas en tiempo de ejecución.
 
-El ejecutable es un único `MiniWord.exe` de unos **461 KB** y solo depende de .NET Framework 4.0 o posterior.
+El ejecutable es un único `MiniWord.exe` de unos **462 KB** y solo depende de .NET Framework 4.0 o posterior.
 
-Versión: **0.0.10 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
+Versión: **0.0.11 Beta**. Estado: **beta pública inicial**. El alcance y las limitaciones están en [`docs/BETA_SCOPE.md`](docs/BETA_SCOPE.md). La vista y la edición usan un **motor tipográfico propio**; la ruta principal no crea ningún control RichEdit.
 
 ## Ejecutable incluido en el repositorio
 
 El ejecutable compilado también está versionado en la raíz del repositorio:
 
-- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 461 KB
-- SHA-256: 1EECA7C3BABAF71BD347A2EF0D8F1AEAD9906785D73C8F503B63444F6A5B1600
+- [MiniWord.exe](https://github.com/JDSEIKA/mini-word/blob/main/MiniWord.exe) — 462 KB
+- SHA-256: 9B86634CFF99BB6D5830B624EB5A6167AEE7225B5D1AA4D9893908D060372D0B
 
 No es un archivo generado por una GitHub Action: está incluido para que pueda descargarse directamente desde el código fuente. La release contiene además el paquete beta y el instalador portátil.
 
 ## Probar y reportar errores
 
-La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.10-beta).
+La beta pública inicial está en [Releases](https://github.com/JDSEIKA/mini-word/releases/tag/v0.0.11-beta).
 
-- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.10-beta/MiniWord.exe)
-- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.10-beta/MiniWord-Beta.zip)
-- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.10-beta/MiniWord-Installer.zip)
+- [Ejecutable directo](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.11-beta/MiniWord.exe)
+- [Paquete beta](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.11-beta/MiniWord-Beta.zip)
+- [Instalador portátil](https://github.com/JDSEIKA/mini-word/releases/download/v0.0.11-beta/MiniWord-Installer.zip)
 
 Para reportar un fallo usa el [formulario de error](https://github.com/JDSEIKA/mini-word/issues/new?template=bug_report.yml). Incluye un DOCX mínimo sin datos privados, la versión de Windows y los pasos exactos. Más detalles en [CONTRIBUTING.md](CONTRIBUTING.md).
 
