@@ -63,6 +63,7 @@ namespace WordPadClone
         private RunFormat _formatPainterFormat;
         private bool _applyingFormatPainter;
         private FileStream _recoveryLock;
+        private ContextMenuStrip _tableMenu;
 
         public NativeEditorForm(string[] args)
         {
@@ -84,6 +85,7 @@ namespace WordPadClone
             _editor.Dock = DockStyle.Fill;
             _editor.TextChanged += EditorTextChanged;
             _editor.SelectionChanged += EditorSelectionChanged;
+            _editor.TableContextMenuRequested += ShowTableContextMenu;
             _editor.PageCountChanged += EditorPageCountChanged;
             _editor.Scroll += delegate { UpdateStatus(); };
             _editor.ViewChanged += delegate { UpdateViewStatus(); };
@@ -1795,6 +1797,52 @@ namespace WordPadClone
             }
         }
 
+        private void ShowTableContextMenu(Point screenLocation)
+        {
+            if (_tableMenu == null) _tableMenu = BuildTableContextMenu();
+            _tableMenu.Show(_editor, _editor.PointToClient(screenLocation));
+        }
+
+        private ContextMenuStrip BuildTableContextMenu()
+        {
+            ContextMenuStrip menu = new ContextMenuStrip();
+            ToolStripMenuItem merge = new ToolStripMenuItem("Fusionar celdas");
+            merge.Click += delegate
+            {
+                if (_editor.CanMergeTableCells) _editor.MergeSelectedTableCells();
+                FocusEditor();
+            };
+            menu.Items.Add(merge);
+            ToolStripMenuItem split = new ToolStripMenuItem("Dividir celda");
+            split.Click += delegate { _editor.SplitSelectedTableCell(); FocusEditor(); };
+            menu.Items.Add(split);
+            menu.Items.Add(new ToolStripSeparator());
+            ToolStripMenuItem color = new ToolStripMenuItem("Color de celda...");
+            color.Click += delegate { ChooseCellColor(); };
+            menu.Items.Add(color);
+            ToolStripMenuItem clear = new ToolStripMenuItem("Sin color");
+            clear.Click += delegate { ClearCellColor(); };
+            menu.Items.Add(clear);
+            menu.Items.Add(new ToolStripSeparator());
+            ToolStripMenuItem addRow = new ToolStripMenuItem("Añadir fila");
+            addRow.Click += delegate { _editor.AddTableRow(); FocusEditor(); };
+            menu.Items.Add(addRow);
+            ToolStripMenuItem removeRow = new ToolStripMenuItem("Eliminar fila");
+            removeRow.Click += delegate { _editor.RemoveTableRow(); FocusEditor(); };
+            menu.Items.Add(removeRow);
+            ToolStripMenuItem addColumn = new ToolStripMenuItem("Añadir columna");
+            addColumn.Click += delegate { _editor.AddTableColumn(); FocusEditor(); };
+            menu.Items.Add(addColumn);
+            ToolStripMenuItem removeColumn = new ToolStripMenuItem("Eliminar columna");
+            removeColumn.Click += delegate { _editor.RemoveTableColumn(); FocusEditor(); };
+            menu.Items.Add(removeColumn);
+            menu.Opening += delegate
+            {
+                merge.Enabled = _editor.CanMergeTableCells;
+                split.Enabled = _editor.HasTableCellSelection;
+            };
+            return menu;
+        }
         private void ChooseCellColor()
         {
             using (ColorDialog dialog = new ColorDialog())

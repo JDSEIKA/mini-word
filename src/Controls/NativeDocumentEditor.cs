@@ -361,6 +361,8 @@ namespace WordPadClone.Controls
 
 		private int _tableSelectionEndColumn;
 
+		public event Action<Point> TableContextMenuRequested;
+
 		private bool _tableDragging;
 
 		private bool _tableMoved;
@@ -4179,6 +4181,21 @@ namespace WordPadClone.Controls
 				Invalidate();
 				return;
 			}
+			if (e.Button == MouseButtons.Right)
+			{
+				LayoutTableCell tableCell = TableCellAt(e.Location);
+				if (tableCell != null)
+				{
+					if (!IsInTableSelection(tableCell))
+						SelectTableCellAt(e.Location);
+					Focus();
+					if (TableContextMenuRequested != null)
+					{
+						TableContextMenuRequested(PointToScreen(e.Location));
+						return;
+					}
+				}
+			}
 			if (e.Button == MouseButtons.Right && _spellEnabled)
 			{
 				Focus();
@@ -6132,6 +6149,26 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		public void SelectTableCellAt(Point client)
+		{
+			LayoutTableCell cell = TableCellAt(client);
+			if (cell == null) return;
+			CommitCellEditor(false);
+			_tableSelectionParagraph = FindTableParagraph(cell);
+			_tableSelectionStartRow = (_tableSelectionEndRow = cell.Row);
+			_tableSelectionStartColumn = (_tableSelectionEndColumn = cell.Column);
+			Invalidate();
+		}
+
+		private bool IsInTableSelection(LayoutTableCell cell)
+		{
+			if (cell == null || _tableSelectionParagraph != FindTableParagraph(cell)) return false;
+			int row1 = Math.Min(_tableSelectionStartRow, _tableSelectionEndRow);
+			int row2 = Math.Max(_tableSelectionStartRow, _tableSelectionEndRow);
+			int col1 = Math.Min(_tableSelectionStartColumn, _tableSelectionEndColumn);
+			int col2 = Math.Max(_tableSelectionStartColumn, _tableSelectionEndColumn);
+			return cell.Row >= row1 && cell.Row <= row2 && cell.Column >= col1 && cell.Column <= col2;
+		}
 		private void CommitCellEditor(bool rebuild)
 		{
 			if (_suppressCellCommit) return;

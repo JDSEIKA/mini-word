@@ -217,3 +217,13 @@ Las pruebas cubren:
 - **Tablas → Color de celda** abre el selector de color y aplica el fondo a la celda o al rango seleccionado.
 - **Sin color** quita el relleno.
 - El color se conserva al guardar en DOCX.
+### Menú contextual de tabla
+
+Al hacer clic derecho sobre una celda o un rango seleccionado aparece un menú con:
+
+- Fusionar celdas.
+- Dividir celda.
+- Color de celda.
+- Sin color.
+- Añadir/eliminar fila.
+- Añadir/eliminar columna.
