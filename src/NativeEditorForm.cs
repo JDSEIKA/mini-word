@@ -123,7 +123,7 @@ namespace WordPadClone
                     else
                         NewDocument();
                 }
-                _editor.Focus();
+                FocusEditor();
             };
             FormClosing += NativeFormClosing;
         }
@@ -434,14 +434,14 @@ namespace WordPadClone
         private RibbonGroup BuildClipboardGroup()
         {
             RibbonGroup group = NewGroup("Portapapeles");
-            group.Strip.Items.Add(LargeButton("Pegar", "paste", delegate { _editor.Paste(); _editor.Focus(); }));
-            ToolStripButton plainPaste = LargeButton("Pegar sin formato", "paste", delegate { _editor.PastePlainText(); _editor.Focus(); });
+            group.Strip.Items.Add(LargeButton("Pegar", "paste", delegate { _editor.Paste(); FocusEditor(); }));
+            ToolStripButton plainPaste = LargeButton("Pegar sin formato", "paste", delegate { _editor.PastePlainText(); FocusEditor(); });
             plainPaste.ToolTipText = "Solo texto: sin fuentes, tamaños, negritas ni colores";
             group.Strip.Items.Add(plainPaste);
-            group.Strip.Items.Add(IconButton("Cortar", "cut", delegate { _editor.Cut(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Copiar", "copy", delegate { _editor.Copy(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Deshacer", "undo", delegate { _editor.Undo(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Rehacer", "redo", delegate { _editor.Redo(); _editor.Focus(); }));
+            group.Strip.Items.Add(IconButton("Cortar", "cut", delegate { _editor.Cut(); FocusEditor(); }));
+            group.Strip.Items.Add(IconButton("Copiar", "copy", delegate { _editor.Copy(); FocusEditor(); }));
+            group.Strip.Items.Add(IconButton("Deshacer", "undo", delegate { _editor.Undo(); FocusEditor(); }));
+            group.Strip.Items.Add(IconButton("Rehacer", "redo", delegate { _editor.Redo(); FocusEditor(); }));
             return group;
         }
 
@@ -507,9 +507,9 @@ namespace WordPadClone
             _sizeBox.KeyDown += delegate(object sender, KeyEventArgs e) { if (e.KeyCode == Keys.Enter) { ApplyFontSize(); e.SuppressKeyPress = true; } };
             group.Strip.Items.Add(_sizeBox);
 
-            _boldButton = IconToggle("Negrita", "bold", delegate { _editor.ToggleBold(); SyncToolbar(); if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else _editor.Focus(); });
-            _italicButton = IconToggle("Cursiva", "italic", delegate { _editor.ToggleItalic(); SyncToolbar(); if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else _editor.Focus(); });
-            _underlineButton = IconToggle("Subrayado", "underline", delegate { _editor.ToggleUnderline(); SyncToolbar(); if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else _editor.Focus(); });
+            _boldButton = IconToggle("Negrita", "bold", delegate { _editor.ToggleBold(); SyncToolbar(); if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else FocusEditor(); });
+            _italicButton = IconToggle("Cursiva", "italic", delegate { _editor.ToggleItalic(); SyncToolbar(); if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else FocusEditor(); });
+            _underlineButton = IconToggle("Subrayado", "underline", delegate { _editor.ToggleUnderline(); SyncToolbar(); if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else FocusEditor(); });
             group.Strip.Items.Add(_boldButton);
             group.Strip.Items.Add(_italicButton);
             group.Strip.Items.Add(_underlineButton);
@@ -520,26 +520,26 @@ namespace WordPadClone
         private RibbonGroup BuildParagraphGroup()
         {
             RibbonGroup group = NewGroup("Párrafo");
-            _leftButton = IconToggle("Izquierda", "left", delegate { _editor.SetAlignment(ParagraphAlignment.Left); SyncToolbar(); _editor.Focus(); });
-            _centerButton = IconToggle("Centrar", "center", delegate { _editor.SetAlignment(ParagraphAlignment.Center); SyncToolbar(); _editor.Focus(); });
-            _rightButton = IconToggle("Derecha", "right", delegate { _editor.SetAlignment(ParagraphAlignment.Right); SyncToolbar(); _editor.Focus(); });
-            ToolStripButton justify = IconButton("Justificar", "justify", delegate { _editor.SetAlignment(ParagraphAlignment.Justify); SyncToolbar(); _editor.Focus(); });
+            _leftButton = IconToggle("Izquierda", "left", delegate { _editor.SetAlignment(ParagraphAlignment.Left); SyncToolbar(); FocusEditor(); });
+            _centerButton = IconToggle("Centrar", "center", delegate { _editor.SetAlignment(ParagraphAlignment.Center); SyncToolbar(); FocusEditor(); });
+            _rightButton = IconToggle("Derecha", "right", delegate { _editor.SetAlignment(ParagraphAlignment.Right); SyncToolbar(); FocusEditor(); });
+            ToolStripButton justify = IconButton("Justificar", "justify", delegate { _editor.SetAlignment(ParagraphAlignment.Justify); SyncToolbar(); FocusEditor(); });
             group.Strip.Items.Add(_leftButton);
             group.Strip.Items.Add(_centerButton);
             group.Strip.Items.Add(_rightButton);
             group.Strip.Items.Add(justify);
-            group.Strip.Items.Add(IconButton("Aumentar sangría", "indent", delegate { _editor.IncreaseIndent(); SyncToolbar(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Disminuir sangría", "outdent", delegate { _editor.DecreaseIndent(); SyncToolbar(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Viñeta", "bullet", delegate { _editor.ToggleBullet(); SyncToolbar(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Numeración", "numbered", delegate { _editor.ToggleNumberedList(); SyncToolbar(); _editor.Focus(); }));
+            group.Strip.Items.Add(IconButton("Aumentar sangría", "indent", delegate { _editor.IncreaseIndent(); SyncToolbar(); FocusEditor(); }));
+            group.Strip.Items.Add(IconButton("Disminuir sangría", "outdent", delegate { _editor.DecreaseIndent(); SyncToolbar(); FocusEditor(); }));
+            group.Strip.Items.Add(IconButton("Viñeta", "bullet", delegate { _editor.ToggleBullet(); SyncToolbar(); FocusEditor(); }));
+            group.Strip.Items.Add(IconButton("Numeración", "numbered", delegate { _editor.ToggleNumberedList(); SyncToolbar(); FocusEditor(); }));
             ToolStripDropDownButton listLevels = new ToolStripDropDownButton("Lista");
             listLevels.Image = RibbonIcons.Get("list-level");
             listLevels.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
             listLevels.TextImageRelation = TextImageRelation.ImageAboveText;
             listLevels.TextAlign = ContentAlignment.BottomCenter;
             listLevels.ToolTipText = "Nivel de lista";
-            listLevels.DropDownItems.Add(new ToolStripMenuItem("Aumentar nivel", null, delegate { _editor.IncreaseListLevel(); SyncToolbar(); _editor.Focus(); }));
-            listLevels.DropDownItems.Add(new ToolStripMenuItem("Disminuir nivel", null, delegate { _editor.DecreaseListLevel(); SyncToolbar(); _editor.Focus(); }));
+            listLevels.DropDownItems.Add(new ToolStripMenuItem("Aumentar nivel", null, delegate { _editor.IncreaseListLevel(); SyncToolbar(); FocusEditor(); }));
+            listLevels.DropDownItems.Add(new ToolStripMenuItem("Disminuir nivel", null, delegate { _editor.DecreaseListLevel(); SyncToolbar(); FocusEditor(); }));
             group.Strip.Items.Add(listLevels);
             ToolStripDropDownButton styles = new ToolStripDropDownButton("Estilos");
             styles.Image = RibbonIcons.Get("paragraph");
@@ -551,7 +551,7 @@ namespace WordPadClone
             {
                 string styleName = DocumentStyles.Names[si];
                 ToolStripMenuItem item = new ToolStripMenuItem(styleName);
-                item.Click += delegate { _editor.ApplyParagraphStyle(styleName); SyncToolbar(); _editor.Focus(); };
+                item.Click += delegate { _editor.ApplyParagraphStyle(styleName); SyncToolbar(); FocusEditor(); };
                 styles.DropDownItems.Add(item);
             }
             group.Strip.Items.Add(styles);
@@ -563,8 +563,8 @@ namespace WordPadClone
             RibbonGroup group = NewGroup("Tabla");
             group.Strip.Items.Add(LargeButton("Insertar tabla", "table", delegate { InsertTable(); }));
             group.Strip.Items.Add(LargeButton("Editar tabla", "table", delegate { EditTableAtCaret(); }));
-            group.Strip.Items.Add(LargeButton("Agregar fila", "addrow", delegate { if (!_editor.AddTableRow()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
-            group.Strip.Items.Add(LargeButton("Eliminar fila", "removerow", delegate { if (!_editor.RemoveTableRow()) MessageBox.Show(this, "Seleccione una tabla simple, sin celdas combinadas.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
+            group.Strip.Items.Add(LargeButton("Agregar fila", "addrow", delegate { if (!_editor.AddTableRow()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
+            group.Strip.Items.Add(LargeButton("Eliminar fila", "removerow", delegate { if (!_editor.RemoveTableRow()) MessageBox.Show(this, "Seleccione una tabla simple, sin celdas combinadas.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
             group.Strip.Items.Add(LargeButton("Fusionar celdas", "merge", delegate
             {
                 if (_editor.CanMergeTableCells) _editor.MergeSelectedTableCells();
@@ -572,9 +572,9 @@ namespace WordPadClone
                     "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }));
             group.Strip.Items.Add(LargeButton("Dividir celda", "split", delegate { _editor.SplitSelectedTableCell(); }));
-            group.Strip.Items.Add(LargeButton("Añadir columna", "addcolumn", delegate { if (!_editor.AddTableColumn()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
-            group.Strip.Items.Add(LargeButton("Quitar columna", "removecolumn", delegate { if (!_editor.RemoveTableColumn()) MessageBox.Show(this, "Seleccione una tabla simple, sin celdas combinadas.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
-            group.Strip.Items.Add(LargeButton("Repetir encabezado", "table", delegate { if (!_editor.ToggleRepeatTableHeader()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); _editor.Focus(); }));
+            group.Strip.Items.Add(LargeButton("Añadir columna", "addcolumn", delegate { if (!_editor.AddTableColumn()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
+            group.Strip.Items.Add(LargeButton("Quitar columna", "removecolumn", delegate { if (!_editor.RemoveTableColumn()) MessageBox.Show(this, "Seleccione una tabla simple, sin celdas combinadas.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
+            group.Strip.Items.Add(LargeButton("Repetir encabezado", "table", delegate { if (!_editor.ToggleRepeatTableHeader()) MessageBox.Show(this, "Seleccione una tabla.", "Tabla", MessageBoxButtons.OK, MessageBoxIcon.Information); FocusEditor(); }));
             return group;
         }
 
@@ -590,7 +590,7 @@ namespace WordPadClone
                     MessageBox.Show(this, "Seleccione primero una imagen insertada.", "Ajuste de texto",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                _editor.Focus();
+                FocusEditor();
             }));
             return group;
         }
@@ -603,8 +603,8 @@ namespace WordPadClone
                 _editor.InsertTextBox();
                 ActiveControl = _editor;
                 _editor.Select();
-                _editor.Focus();
-                BeginInvoke(new Action(delegate { ActiveControl = _editor; _editor.Select(); _editor.Focus(); }));
+                FocusEditor();
+                BeginInvoke(new Action(delegate { ActiveControl = _editor; _editor.Select(); FocusEditor(); }));
             }));
             group.Strip.Items.Add(LargeButton("Formato de texto", "textbox", delegate
             {
@@ -613,7 +613,7 @@ namespace WordPadClone
                     MessageBox.Show(this, "Seleccione primero un cuadro de texto.", "Formato de texto",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                _editor.Focus();
+                FocusEditor();
             }));
             group.Strip.Items.Add(LargeButton("Forma", "shape", delegate
             {
@@ -624,8 +624,8 @@ namespace WordPadClone
                 }
                 ActiveControl = _editor;
                 _editor.Select();
-                _editor.Focus();
-                BeginInvoke(new Action(delegate { ActiveControl = _editor; _editor.Select(); _editor.Focus(); }));
+                FocusEditor();
+                BeginInvoke(new Action(delegate { ActiveControl = _editor; _editor.Select(); FocusEditor(); }));
             }));
             group.Strip.Items.Add(LargeButton("Color de forma", "shapecolor", delegate
             {
@@ -634,19 +634,19 @@ namespace WordPadClone
                     MessageBox.Show(this, "Seleccione primero una forma insertada.", "Formato de forma",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-                _editor.Focus();
+                FocusEditor();
             }));
             group.Strip.Items.Add(LargeButton("Traer al frente", "shape", delegate
             {
-                if (!_editor.BringSelectedFloatingToFront()) _editor.Focus();
+                if (!_editor.BringSelectedFloatingToFront()) FocusEditor();
             }));
             group.Strip.Items.Add(LargeButton("Enviar al fondo", "shape", delegate
             {
-                if (!_editor.SendSelectedFloatingToBack()) _editor.Focus();
+                if (!_editor.SendSelectedFloatingToBack()) FocusEditor();
             }));
             group.Strip.Items.Add(LargeButton("Rotar 90°", "shape", delegate
             {
-                if (!_editor.RotateSelectedFloating(90)) _editor.Focus();
+                if (!_editor.RotateSelectedFloating(90)) FocusEditor();
             }));
             return group;
         }
@@ -655,7 +655,7 @@ namespace WordPadClone
         {
             RibbonGroup group = NewGroup("Insertar");
             group.Strip.Items.Add(LargeButton("Encabezado y pie", "header", delegate { HeaderFooter(); }));
-            group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); _editor.Focus(); }));
+            group.Strip.Items.Add(LargeButton("Salto de página", "pagebreak", delegate { _editor.InsertPageBreak(); FocusEditor(); }));
             return group;
         }
         private RibbonGroup BuildFieldGroup()
@@ -675,7 +675,7 @@ namespace WordPadClone
                 _editor.InsertField(dialog.SelectedKind);
                 _dirty = true;
                 UpdateTitle();
-                _editor.Focus();
+                FocusEditor();
             }
         }
 
@@ -688,7 +688,7 @@ namespace WordPadClone
             }
             _dirty = true;
             UpdateTitle();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void UpdateToc()
@@ -700,7 +700,7 @@ namespace WordPadClone
             }
             _dirty = true;
             UpdateTitle();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void SyncTrackChangesButton()
@@ -716,7 +716,7 @@ namespace WordPadClone
                 _editor.SetTrackChanges(enabled);
                 _trackChangesButton.Checked = enabled;
                 _status.Text = enabled ? "Control de cambios activado" : "Control de cambios desactivado";
-                _editor.Focus();
+                FocusEditor();
             });
             _trackChangesButton.CheckOnClick = false;
             group.Strip.Items.Add(_trackChangesButton);
@@ -735,7 +735,7 @@ namespace WordPadClone
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             _dirty = true;
             UpdateTitle();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void RejectOneRevision()
@@ -745,7 +745,7 @@ namespace WordPadClone
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             _dirty = true;
             UpdateTitle();
-            _editor.Focus();
+            FocusEditor();
         }
         private void AcceptRevisions()
         {
@@ -756,7 +756,7 @@ namespace WordPadClone
             }
             _dirty = true;
             UpdateTitle();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void RejectRevisions()
@@ -768,7 +768,7 @@ namespace WordPadClone
             }
             _dirty = true;
             UpdateTitle();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void CompareDocuments()
@@ -798,7 +798,7 @@ namespace WordPadClone
                         MessageBox.Show(this, "La comparación detectó " + formatNotes.Count
                             + " cambios de formato. Se aplicaron como formato del documento nuevo.",
                             "Comparar documentos", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    _editor.Focus();
+                    FocusEditor();
                 }
                 catch (Exception ex)
                 {
@@ -824,7 +824,7 @@ namespace WordPadClone
                     _dirty = true;
                     UpdateTitle();
                 }
-                _editor.Focus();
+                FocusEditor();
             }
         }
 
@@ -842,7 +842,7 @@ namespace WordPadClone
             {
                 _ruler.Visible = !_ruler.Visible;
                 _rulerButton.Checked = _ruler.Visible;
-                _editor.Focus();
+                FocusEditor();
             });
             _rulerButton.CheckOnClick = false;
             _rulerButton.Checked = _ruler.Visible;
@@ -878,7 +878,7 @@ namespace WordPadClone
                     dialog.KeepLinesTogether, dialog.KeepWithNext, dialog.WidowControl);
                 _dirty = true;
                 UpdateTitle();
-                _editor.Focus();
+                FocusEditor();
             }
         }
 
@@ -895,14 +895,14 @@ namespace WordPadClone
                     _dirty = true;
                     UpdateTitle();
                 }
-                _editor.Focus();
+                FocusEditor();
             }));
             group.Strip.Items.Add(LargeButton("Salto de sección", "section", delegate
             {
                 _editor.InsertSectionBreak();
                 _dirty = true;
                 UpdateTitle();
-                _editor.Focus();
+                FocusEditor();
             }));
             return group;
         }
@@ -910,8 +910,8 @@ namespace WordPadClone
         private RibbonGroup BuildNavigationGroup()
         {
             RibbonGroup group = NewGroup("Navegación");
-            group.Strip.Items.Add(IconButton("Página anterior", "previous", delegate { _editor.GoToPreviousPage(); _editor.Focus(); }));
-            group.Strip.Items.Add(IconButton("Página siguiente", "next", delegate { _editor.GoToNextPage(); _editor.Focus(); }));
+            group.Strip.Items.Add(IconButton("Página anterior", "previous", delegate { _editor.GoToPreviousPage(); FocusEditor(); }));
+            group.Strip.Items.Add(IconButton("Página siguiente", "next", delegate { _editor.GoToNextPage(); FocusEditor(); }));
             return group;
         }
 
@@ -936,7 +936,7 @@ namespace WordPadClone
             _spellDialog.FormClosed += delegate
             {
                 _spellDialog = null;
-                _editor.Focus();
+                FocusEditor();
             };
             _spellDialog.Show(this);
         }
@@ -1013,7 +1013,7 @@ namespace WordPadClone
             {
                 _editor.SpellCheckEnabled = !_editor.SpellCheckEnabled;
                 _spellToggle.Checked = _editor.SpellCheckEnabled;
-                _editor.Focus();
+                FocusEditor();
             });
             _spellToggle.Checked = true;
             group.Strip.Items.Add(_spellToggle);
@@ -1032,7 +1032,7 @@ namespace WordPadClone
             _spellLanguageBox.SelectedIndexChanged += delegate
             {
                 if (_spellLanguageBox.Text.Length > 0) _editor.SpellLanguage = _spellLanguageBox.Text;
-                _editor.Focus();
+                FocusEditor();
             };
             group.Strip.Items.Add(_spellLanguageBox);
             group.Strip.Items.Add(LargeButton("Ortografía", "spell", delegate { ShowSpellCheck(); }));
@@ -1135,19 +1135,24 @@ namespace WordPadClone
             }
         }
 
+        private void FocusEditor()
+        {
+            if (_editor != null && _editor.IsEditingTableCell) _editor.FocusCellEditor();
+            else if (_editor != null) _editor.Focus();
+        }
         private void ChangeFontSize(float delta)
         {
             RunFormat format = _editor.CurrentFormat;
             float points = Math.Max(1f, format.SizeHalfPoints / 2f + delta);
             _editor.SetFontSize(points);
             SyncToolbar();
-            _editor.Focus();
+            FocusEditor();
         }
         private void ApplyFontFamily()
         {
             if (_updatingToolbar) return;
             _editor.SetFontFamily(_fontBox.Text);
-            if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else _editor.Focus();
+            if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else FocusEditor();
         }
 
         private void ApplyFontSize()
@@ -1155,7 +1160,7 @@ namespace WordPadClone
             if (_updatingToolbar) return;
             float size;
             if (float.TryParse(_sizeBox.Text, out size)) _editor.SetFontSize(size);
-            if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else _editor.Focus();
+            if (_editor.IsEditingTableCell) _editor.FocusCellEditor(); else FocusEditor();
         }
 
         private void UpdateViewStatus()
@@ -1463,6 +1468,7 @@ namespace WordPadClone
 
         private void NewDocument()
         {
+            _editor.CommitPendingCellEdit();
             if (!ConfirmDiscard()) return;
             ClearRecoveryFiles();
             _recoveryPath = null;
@@ -1484,11 +1490,12 @@ namespace WordPadClone
             _lossWarningAccepted = false;
             UpdateTitle();
             UpdateStatus();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void OpenDialog()
         {
+            _editor.CommitPendingCellEdit();
             if (!ConfirmDiscard()) return;
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
@@ -1501,6 +1508,7 @@ namespace WordPadClone
 
         private void OpenFile(string path)
         {
+            _editor.CommitPendingCellEdit();
             try
             {
                 DocumentFormat format = DocumentFormats.Detect(path);
@@ -1542,6 +1550,7 @@ namespace WordPadClone
 
         private bool Save(bool saveAs)
         {
+            _editor.CommitPendingCellEdit();
             if (!saveAs && !string.IsNullOrEmpty(_path) && _format != DocumentFormat.Doc &&
                 !string.Equals(Path.GetExtension(_path), ".doc", StringComparison.OrdinalIgnoreCase))
                 return SaveTo(_path, _format);
@@ -1622,6 +1631,7 @@ namespace WordPadClone
 
         private void NativeFormClosing(object sender, FormClosingEventArgs e)
         {
+            _editor.CommitPendingCellEdit();
             if (!ConfirmDiscard())
             {
                 e.Cancel = true;
@@ -1677,7 +1687,7 @@ namespace WordPadClone
                 _editor.InsertTable(dialog.Rows);
                 _dirty = true;
                 UpdateTitle();
-                _editor.Focus();
+                FocusEditor();
             }
         }
 
@@ -1715,8 +1725,8 @@ namespace WordPadClone
                     UpdateTitle();
                     ActiveControl = _editor;
                     _editor.Select();
-                    _editor.Focus();
-                    BeginInvoke(new Action(delegate { ActiveControl = _editor; _editor.Select(); _editor.Focus(); }));
+                    FocusEditor();
+                    BeginInvoke(new Action(delegate { ActiveControl = _editor; _editor.Select(); FocusEditor(); }));
                 }
                 catch (Exception ex)
                 {
@@ -1733,7 +1743,7 @@ namespace WordPadClone
             _editor.InsertText(text);
             _dirty = true;
             UpdateTitle();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void EditTableAtCaret()
@@ -1765,7 +1775,7 @@ namespace WordPadClone
                 }
                 _dirty = true;
                 UpdateTitle();
-                _editor.Focus();
+                FocusEditor();
             }
         }
 
@@ -1830,7 +1840,7 @@ namespace WordPadClone
                 "Pegado especial", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
             if (answer == DialogResult.Yes) _editor.PastePlainText();
             else if (answer == DialogResult.No) _editor.Paste();
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void ShowComments()
@@ -1849,14 +1859,14 @@ namespace WordPadClone
             _editor.SetTrackChanges(enabled);
             if (_trackChangesButton != null) _trackChangesButton.Checked = enabled;
             _status.Text = enabled ? "Control de cambios activado" : "Control de cambios desactivado";
-            _editor.Focus();
+            FocusEditor();
         }
 
         private void CopyFormatForPainter()
         {
             _formatPainterFormat = _editor.CurrentFormat;
             _status.Text = "Formato copiado; seleccione el texto de destino";
-            _editor.Focus();
+            FocusEditor();
         }
         private void FindReplace()
         {
@@ -1875,6 +1885,7 @@ namespace WordPadClone
 
         private void PrintDocument()
         {
+            _editor.CommitPendingCellEdit();
             float zoom = _editor.Zoom;
             try
             {
@@ -1893,6 +1904,7 @@ namespace WordPadClone
 
         private void PrintPreview()
         {
+            _editor.CommitPendingCellEdit();
             float zoom = _editor.Zoom;
             try
             {
@@ -1966,22 +1978,22 @@ namespace WordPadClone
             if (keyData == (Keys.Control | Keys.H)) { FindReplace(); return true; }
             if (keyData == (Keys.Control | Keys.K)) { EditHyperlink(); return true; }
             if (keyData == Keys.F7) { ShowSpellCheck(); return true; }
-            if (keyData == (Keys.Control | Keys.E)) { _editor.SetAlignment(ParagraphAlignment.Center); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.L)) { _editor.SetAlignment(ParagraphAlignment.Left); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.R)) { _editor.SetAlignment(ParagraphAlignment.Right); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.J)) { _editor.SetAlignment(ParagraphAlignment.Justify); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.M)) { _editor.IncreaseIndent(); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.Shift | Keys.M)) { _editor.DecreaseIndent(); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.Shift | Keys.L)) { _editor.ToggleBullet(); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.E)) { _editor.SetAlignment(ParagraphAlignment.Center); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.L)) { _editor.SetAlignment(ParagraphAlignment.Left); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.R)) { _editor.SetAlignment(ParagraphAlignment.Right); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.J)) { _editor.SetAlignment(ParagraphAlignment.Justify); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.M)) { _editor.IncreaseIndent(); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.M)) { _editor.DecreaseIndent(); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.L)) { _editor.ToggleBullet(); SyncToolbar(); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.D7) || keyData == (Keys.Control | Keys.Shift | Keys.NumPad7))
-            { _editor.ToggleNumberedList(); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.Shift | Keys.N)) { _editor.ApplyParagraphStyle("Normal"); SyncToolbar(); _editor.Focus(); return true; }
+            { _editor.ToggleNumberedList(); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.N)) { _editor.ApplyParagraphStyle("Normal"); SyncToolbar(); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Alt | Keys.D1) || keyData == (Keys.Control | Keys.Alt | Keys.NumPad1))
-            { _editor.ApplyParagraphStyle("Título 1"); SyncToolbar(); _editor.Focus(); return true; }
+            { _editor.ApplyParagraphStyle("Título 1"); SyncToolbar(); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Alt | Keys.D2) || keyData == (Keys.Control | Keys.Alt | Keys.NumPad2))
-            { _editor.ApplyParagraphStyle("Título 2"); SyncToolbar(); _editor.Focus(); return true; }
+            { _editor.ApplyParagraphStyle("Título 2"); SyncToolbar(); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Alt | Keys.D3) || keyData == (Keys.Control | Keys.Alt | Keys.NumPad3))
-            { _editor.ApplyParagraphStyle("Título 3"); SyncToolbar(); _editor.Focus(); return true; }
+            { _editor.ApplyParagraphStyle("Título 3"); SyncToolbar(); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.E)) { ToggleTrackChanges(); return true; }
             if (keyData == (Keys.Control | Keys.Alt | Keys.M)) { ShowComments(); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.C)) { CopyFormatForPainter(); return true; }
@@ -1989,14 +2001,14 @@ namespace WordPadClone
             if (keyData == Keys.F9) { _editor.UpdateFields(); return true; }
             if (keyData == Keys.F11) { _editor.SelectNextField((Control.ModifierKeys & Keys.Shift) == 0); return true; }
             if (keyData == Keys.F5 || keyData == (Keys.Control | Keys.G)) { ShowGoTo(); return true; }
-            if (keyData == (Keys.Control | Keys.D1) || keyData == (Keys.Control | Keys.NumPad1)) { _editor.SetCurrentLineSpacing(0); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.D5) || keyData == (Keys.Control | Keys.NumPad5)) { _editor.SetCurrentLineSpacing(1); SyncToolbar(); _editor.Focus(); return true; }
-            if (keyData == (Keys.Control | Keys.D2) || keyData == (Keys.Control | Keys.NumPad2)) { _editor.SetCurrentLineSpacing(2); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.D1) || keyData == (Keys.Control | Keys.NumPad1)) { _editor.SetCurrentLineSpacing(0); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.D5) || keyData == (Keys.Control | Keys.NumPad5)) { _editor.SetCurrentLineSpacing(1); SyncToolbar(); FocusEditor(); return true; }
+            if (keyData == (Keys.Control | Keys.D2) || keyData == (Keys.Control | Keys.NumPad2)) { _editor.SetCurrentLineSpacing(2); SyncToolbar(); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.OemPeriod)) { ChangeFontSize(2f); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.Oemcomma)) { ChangeFontSize(-2f); return true; }
             if (keyData == (Keys.Control | Keys.OemCloseBrackets)) { ChangeFontSize(1f); return true; }
             if (keyData == (Keys.Control | Keys.OemOpenBrackets)) { ChangeFontSize(-1f); return true; }
-            if (keyData == (Keys.Control | Keys.Shift | Keys.Space)) { _editor.InsertText("\u00A0"); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.Space)) { _editor.InsertText("\u00A0"); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.Z)) { _editor.Redo(); return true; }            if (keyData == (Keys.Control | Keys.N)) { NewDocument(); return true; }
             if (keyData == (Keys.Control | Keys.O)) { OpenDialog(); return true; }
             if (keyData == (Keys.Control | Keys.S)) { Save(false); return true; }
@@ -2010,13 +2022,13 @@ namespace WordPadClone
                 SetZoom(_editor.Zoom + (keyData == (Keys.Control | Keys.Add) || keyData == (Keys.Control | Keys.Oemplus) ? 0.1f : -0.1f));
                 return true;
             }
-            if (keyData == (Keys.Control | Keys.D0)) { _editor.ApplyParagraphStyle("Normal"); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.D0)) { _editor.ApplyParagraphStyle("Normal"); SyncToolbar(); FocusEditor(); return true; }
             if (keyData == (Keys.Control | Keys.Alt | Keys.D0)) { SetZoom(1f); return true; }
             if (keyData == Keys.Enter && _editor != null && !_editor.ContainsFocus && ActiveControl is ToolStrip)
             {
                 ActiveControl = _editor;
                 _editor.Select();
-                _editor.Focus();
+                FocusEditor();
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);

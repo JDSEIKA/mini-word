@@ -5461,6 +5461,7 @@ namespace WordPadClone.Controls
 				_cellEditor.ForeColor = Color.Black;
 				_cellEditor.Font = new Font(FontResolver.Resolve("Calibri", "Español"), 11f);
 				_cellEditor.DetectUrls = false;
+				_cellEditor.HideSelection = false;
 				_cellEditor.TextChanged += delegate
 				{
 					if (_cellEdit != null && !_suppressCellLeave && !_suppressCellFormatting)
@@ -5475,13 +5476,10 @@ namespace WordPadClone.Controls
 					}
 				};
 				_cellEditor.KeyDown += CellEditorKeyDown;
-				_cellEditor.Leave += delegate
-				{
-					if (!_suppressCellLeave && !_suppressCellCommit && !FocusIsToolbar())
-					{
-						CommitCellEditor(true);
-					}
-				};
+				// La edición de celda no se cierra al perder el foco hacia la cinta
+				// o un diálogo de formato: así se conserva la selección. El cierre
+				// se hace al pulsar otra celda, Tab, Escape o al guardar/cerrar.
+
 				base.Controls.Add(_cellEditor);
 			}
 			_cellEdit = cell;
@@ -7306,6 +7304,11 @@ namespace WordPadClone.Controls
 		public void FocusCellEditor()
 		{
 			if (IsEditingTableCell) _cellEditor.Focus();
+		}
+
+		public void CommitPendingCellEdit()
+		{
+			if (IsEditingTableCell) CommitCellEditor(true);
 		}
 
 		private bool ApplyCellRunChange(int start, int length, Action<RunFormat> change)

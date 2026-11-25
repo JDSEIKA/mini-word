@@ -104,6 +104,17 @@ try {
     try { & $shortcutExe }
     finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw "shortcut smoke failed" }
+    $cellFocusTest = Join-Path $PSScriptRoot "CellFocusSmoke.cs"
+    $cellFocusExe = Join-Path $tmp "CellFocusSmoke.exe"
+    & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `
+        "/out:$cellFocusExe" `
+        /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Xml.dll /r:System.Xml.Linq.dll `
+        $source $cellFocusTest
+    if ($LASTEXITCODE -ne 0) { throw "cell focus smoke compile failed" }
+    Push-Location $root
+    try { & $cellFocusExe }
+    finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { throw "cell focus smoke failed" }
     $securityTest = Join-Path $PSScriptRoot "SecuritySmoke.cs"
     $securityExe = Join-Path $tmp "SecuritySmoke.exe"
     & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `
