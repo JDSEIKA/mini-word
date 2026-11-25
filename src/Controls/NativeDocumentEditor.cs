@@ -4770,11 +4770,15 @@ namespace WordPadClone.Controls
 				e.Handled = true;
 				break;
 			case Keys.Up:
-				MoveVertical(-1, shift);
+				if (control && shift) SelectToParagraphBoundary(true);
+				else if (e.Alt && shift) MoveCurrentParagraph(-1);
+				else MoveVertical(-1, shift);
 				e.Handled = true;
 				break;
 			case Keys.Down:
-				MoveVertical(1, shift);
+				if (control && shift) SelectToParagraphBoundary(false);
+				else if (e.Alt && shift) MoveCurrentParagraph(1);
+				else MoveVertical(1, shift);
 				e.Handled = true;
 				break;
 			case Keys.Home:
@@ -4800,15 +4804,15 @@ namespace WordPadClone.Controls
 				e.Handled = true;
 				break;
 			case Keys.Back:
-				Backspace();
+				if (control) DeleteWordBackward(); else Backspace();
 				e.Handled = true;
 				break;
 			case Keys.Delete:
-				DeleteForward();
+				if (control) DeleteWordForward(); else DeleteForward();
 				e.Handled = true;
 				break;
 			case Keys.Return:
-				AddParagraphAfterCaret();
+				if (shift) InsertLineBreak(); else AddParagraphAfterCaret();
 				e.Handled = true;
 				break;
 			case Keys.Tab:
@@ -4858,7 +4862,7 @@ namespace WordPadClone.Controls
 			case Keys.Z:
 				if (control)
 				{
-					Undo();
+					if (shift) Redo(); else Undo();
 					e.Handled = true;
 				}
 				break;
@@ -6361,6 +6365,160 @@ namespace WordPadClone.Controls
 			}
 		}
 
+		public void InsertLineBreak()
+		{
+			if (_document == null) return;
+			PushUndo();
+			if (HasSelection) DeleteSelectionInternal();
+			InsertRaw(_caret.P, _caret.Offset, "\n");
+			_caret = new CaretPos(_caret.P, _caret.Offset + 1);
+			_anchor = _caret;
+			AfterEdit();
+		}
+
+		public void DeleteWordBackward()
+		{
+			if (_document == null) return;
+			if (HasSelection) { InsertTextAtCaret(string.Empty); return; }
+			if (_caret.Offset <= 0) return;
+			string text = GetText(_document.Paragraphs[_caret.P]);
+			int start = _caret.Offset;
+			while (start > 0 && char.IsWhiteSpace(text[start - 1])) start--;
+			while (start > 0 && !char.IsWhiteSpace(text[start - 1])) start--;
+			if (start == _caret.Offset) return;
+			PushUndo();
+			RemoveText(_document.Paragraphs[_caret.P], start, _caret.Offset - start);
+			_caret = new CaretPos(_caret.P, start);
+			_anchor = _caret;
+			AfterEdit();
+		}
+
+		public void DeleteWordForward()
+		{
+			if (_document == null) return;
+			if (HasSelection) { InsertTextAtCaret(string.Empty); return; }
+			Paragraph p = _document.Paragraphs[_caret.P];
+			string text = GetText(p);
+			if (_caret.Offset >= text.Length) return;
+			int end = _caret.Offset;
+			while (end < text.Length && char.IsWhiteSpace(text[end])) end++;
+			while (end < text.Length && !char.IsWhiteSpace(text[end])) end++;
+			if (end == _caret.Offset) return;
+			PushUndo();
+			RemoveText(p, _caret.Offset, end - _caret.Offset);
+			_anchor = _caret;
+			AfterEdit();
+		}
+
+		public void SetCurrentLineSpacing(int spacing)
+		{
+			if (_document == null) return;
+			PushUndo();
+			CaretPos start, end;
+			NormalizeSelection(out start, out end);
+			int value = Math.Max(0, Math.Min(2, spacing));
+			for (int i = start.P; i <= end.P && i < _document.Paragraphs.Count; i++)
+				_document.Paragraphs[i].LineSpacing = value;
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+		}
+
+		public bool MoveCurrentParagraph(int direction)
+		{
+			if (_document == null) return false;
+			int target = _caret.P + direction;
+			if (target < 0 || target >= _document.Paragraphs.Count) return false;
+			PushUndo();
+			Paragraph current = _document.Paragraphs[_caret.P];
+			_document.Paragraphs[_caret.P] = _document.Paragraphs[target];
+			_document.Paragraphs[target] = current;
+			_caret = new CaretPos(target, _caret.Offset);
+			_anchor = new CaretPos(target, _caret.Offset);
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
+		}
+
+		public void SelectToParagraphBoundary(bool start)
+		{
+			if (_document == null) return;
+			int offset = start ? 0 : GetText(_document.Paragraphs[_caret.P]).Length;
+			_anchor = new CaretPos(_caret.P, _caret.Offset);
+			_caret = new CaretPos(_caret.P, offset);
+			Invalidate();
+			OnSelectionChanged();
+			EnsureCaretVisible();
+		}
+
+		public bool UpdateFields()
+		{
+			if (_document == null) return false;
+			EnsureHandleLayout();
+			bool changed = RefreshFieldValues();
+			if (changed)
+			{
+				InvalidateLayout(true);
+				OnTextChanged();
+			}
+			return changed;
+		}
+
+		public bool SelectNextField(bool forward)
+		{
+			if (_document == null) return false;
+			List<CaretPos> fields = new List<CaretPos>();
+			for (int p = 0; p < _document.Paragraphs.Count; p++)
+			{
+				int offset = 0;
+				for (int i = 0; i < _document.Paragraphs[p].Inlines.Count; i++)
+				{
+					TextInline run = _document.Paragraphs[p].Inlines[i] as TextInline;
+					if (run == null) continue;
+					if (run.Field != FieldKind.None) fields.Add(new CaretPos(p, offset));
+					offset += run.Text.Length;
+				}
+			}
+			if (fields.Count == 0) return false;
+			CaretPos target = fields[0];
+			if (forward)
+			{
+				for (int i = 0; i < fields.Count; i++)
+					if (fields[i].P > _caret.P || (fields[i].P == _caret.P && fields[i].Offset > _caret.Offset))
+					{ target = fields[i]; break; }
+			}
+			else
+			{
+				target = fields[fields.Count - 1];
+				for (int i = fields.Count - 1; i >= 0; i--)
+					if (fields[i].P < _caret.P || (fields[i].P == _caret.P && fields[i].Offset < _caret.Offset))
+					{ target = fields[i]; break; }
+			}
+			_anchor = target;
+			_caret = target;
+			Invalidate();
+			OnSelectionChanged();
+			EnsureCaretVisible();
+			return true;
+		}
+
+		public bool GoToPage(int page)
+		{
+			if (_document == null) return false;
+			EnsureHandleLayout();
+			if (_pages.Count == 0) return false;
+			int index = Math.Max(0, Math.Min(_pages.Count - 1, page - 1));
+			LayoutPage target = _pages[index];
+			if (target.Lines.Count == 0) return false;
+			LayoutLine line = target.Lines[0];
+			_caret = new CaretPos(line.Paragraph, line.Start);
+			_anchor = _caret;
+			Invalidate();
+			OnSelectionChanged();
+			EnsureCaretVisible();
+			return true;
+		}
 		public void InsertText(string text)
 		{
 			InsertTextAtCaret(text);

@@ -93,6 +93,17 @@ try {
     try { & $autoSaveExe }
     finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw "autosave audit failed" }
+    $shortcutTest = Join-Path $PSScriptRoot "ShortcutSmoke.cs"
+    $shortcutExe = Join-Path $tmp "ShortcutSmoke.exe"
+    & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `
+        "/out:$shortcutExe" `
+        /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Xml.dll /r:System.Xml.Linq.dll `
+        $source $shortcutTest
+    if ($LASTEXITCODE -ne 0) { throw "shortcut smoke compile failed" }
+    Push-Location $root
+    try { & $shortcutExe }
+    finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { throw "shortcut smoke failed" }
     $securityTest = Join-Path $PSScriptRoot "SecuritySmoke.cs"
     $securityExe = Join-Path $tmp "SecuritySmoke.exe"
     & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `

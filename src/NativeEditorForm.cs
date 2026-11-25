@@ -60,6 +60,8 @@ namespace WordPadClone
         private bool _lossWarningAccepted;
         private static Mutex _recoveryMutex;
         private bool _ownsRecoveryMutex;
+        private RunFormat _formatPainterFormat;
+        private bool _applyingFormatPainter;
         private FileStream _recoveryLock;
 
         public NativeEditorForm(string[] args)
@@ -1090,6 +1092,18 @@ namespace WordPadClone
         {
             SyncToolbar();
             UpdateStatus();
+            if (_formatPainterFormat != null && !_applyingFormatPainter && _editor.HasSelection)
+            {
+                _applyingFormatPainter = true;
+                try
+                {
+                    RunFormat copied = _formatPainterFormat;
+                    _formatPainterFormat = null;
+                    _editor.ApplySelectionFormat(copied);
+                    _status.Text = "Formato aplicado";
+                }
+                finally { _applyingFormatPainter = false; }
+            }
         }
 
         private void EditorPageCountChanged(object sender, EventArgs e)
@@ -1121,6 +1135,14 @@ namespace WordPadClone
             }
         }
 
+        private void ChangeFontSize(float delta)
+        {
+            RunFormat format = _editor.CurrentFormat;
+            float points = Math.Max(1f, format.SizeHalfPoints / 2f + delta);
+            _editor.SetFontSize(points);
+            SyncToolbar();
+            _editor.Focus();
+        }
         private void ApplyFontFamily()
         {
             if (_updatingToolbar) return;
@@ -1786,6 +1808,56 @@ namespace WordPadClone
             }
         }
 
+        private void ShowGoTo()
+        {
+            using (GoToDialog dialog = new GoToDialog(_editor.PageCount))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                    _editor.GoToPage(dialog.PageNumber);
+            }
+        }
+
+        private void PasteSpecial()
+        {
+            if (!Clipboard.ContainsText())
+            {
+                MessageBox.Show(this, "El portapapeles no contiene texto.", "Pegado especial",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            DialogResult answer = MessageBox.Show(this,
+                "¿Pegar como texto sin formato?\n\nSí = sin formato   ·   No = con formato",
+                "Pegado especial", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+            if (answer == DialogResult.Yes) _editor.PastePlainText();
+            else if (answer == DialogResult.No) _editor.Paste();
+            _editor.Focus();
+        }
+
+        private void ShowComments()
+        {
+            using (CommentsDialog dialog = new CommentsDialog(_editor.Document))
+            {
+                dialog.ShowDialog(this);
+                _dirty = true;
+                UpdateTitle();
+            }
+        }
+
+        private void ToggleTrackChanges()
+        {
+            bool enabled = !_editor.TrackChanges;
+            _editor.SetTrackChanges(enabled);
+            if (_trackChangesButton != null) _trackChangesButton.Checked = enabled;
+            _status.Text = enabled ? "Control de cambios activado" : "Control de cambios desactivado";
+            _editor.Focus();
+        }
+
+        private void CopyFormatForPainter()
+        {
+            _formatPainterFormat = _editor.CurrentFormat;
+            _status.Text = "Formato copiado; seleccione el texto de destino";
+            _editor.Focus();
+        }
         private void FindReplace()
         {
             using (NativeFindDialog dialog = new NativeFindDialog(_editor))
@@ -1890,7 +1962,42 @@ namespace WordPadClone
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (keyData == (Keys.Control | Keys.N)) { NewDocument(); return true; }
+            if (keyData == (Keys.Control | Keys.W)) { Close(); return true; }
+            if (keyData == (Keys.Control | Keys.H)) { FindReplace(); return true; }
+            if (keyData == (Keys.Control | Keys.K)) { EditHyperlink(); return true; }
+            if (keyData == Keys.F7) { ShowSpellCheck(); return true; }
+            if (keyData == (Keys.Control | Keys.E)) { _editor.SetAlignment(ParagraphAlignment.Center); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.L)) { _editor.SetAlignment(ParagraphAlignment.Left); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.R)) { _editor.SetAlignment(ParagraphAlignment.Right); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.J)) { _editor.SetAlignment(ParagraphAlignment.Justify); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.M)) { _editor.IncreaseIndent(); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.M)) { _editor.DecreaseIndent(); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.L)) { _editor.ToggleBullet(); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.D7) || keyData == (Keys.Control | Keys.Shift | Keys.NumPad7))
+            { _editor.ToggleNumberedList(); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.N)) { _editor.ApplyParagraphStyle("Normal"); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Alt | Keys.D1) || keyData == (Keys.Control | Keys.Alt | Keys.NumPad1))
+            { _editor.ApplyParagraphStyle("Título 1"); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Alt | Keys.D2) || keyData == (Keys.Control | Keys.Alt | Keys.NumPad2))
+            { _editor.ApplyParagraphStyle("Título 2"); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Alt | Keys.D3) || keyData == (Keys.Control | Keys.Alt | Keys.NumPad3))
+            { _editor.ApplyParagraphStyle("Título 3"); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.E)) { ToggleTrackChanges(); return true; }
+            if (keyData == (Keys.Control | Keys.Alt | Keys.M)) { ShowComments(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.C)) { CopyFormatForPainter(); return true; }
+            if (keyData == (Keys.Control | Keys.Alt | Keys.V)) { PasteSpecial(); return true; }
+            if (keyData == Keys.F9) { _editor.UpdateFields(); return true; }
+            if (keyData == Keys.F11) { _editor.SelectNextField((Control.ModifierKeys & Keys.Shift) == 0); return true; }
+            if (keyData == Keys.F5 || keyData == (Keys.Control | Keys.G)) { ShowGoTo(); return true; }
+            if (keyData == (Keys.Control | Keys.D1) || keyData == (Keys.Control | Keys.NumPad1)) { _editor.SetCurrentLineSpacing(0); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.D5) || keyData == (Keys.Control | Keys.NumPad5)) { _editor.SetCurrentLineSpacing(1); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.D2) || keyData == (Keys.Control | Keys.NumPad2)) { _editor.SetCurrentLineSpacing(2); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.OemPeriod)) { ChangeFontSize(2f); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.Oemcomma)) { ChangeFontSize(-2f); return true; }
+            if (keyData == (Keys.Control | Keys.OemCloseBrackets)) { ChangeFontSize(1f); return true; }
+            if (keyData == (Keys.Control | Keys.OemOpenBrackets)) { ChangeFontSize(-1f); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.Space)) { _editor.InsertText("\u00A0"); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.Z)) { _editor.Redo(); return true; }            if (keyData == (Keys.Control | Keys.N)) { NewDocument(); return true; }
             if (keyData == (Keys.Control | Keys.O)) { OpenDialog(); return true; }
             if (keyData == (Keys.Control | Keys.S)) { Save(false); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.S) || keyData == Keys.F12) { Save(true); return true; }
@@ -1903,7 +2010,8 @@ namespace WordPadClone
                 SetZoom(_editor.Zoom + (keyData == (Keys.Control | Keys.Add) || keyData == (Keys.Control | Keys.Oemplus) ? 0.1f : -0.1f));
                 return true;
             }
-            if (keyData == (Keys.Control | Keys.D0)) { SetZoom(1f); return true; }
+            if (keyData == (Keys.Control | Keys.D0)) { _editor.ApplyParagraphStyle("Normal"); SyncToolbar(); _editor.Focus(); return true; }
+            if (keyData == (Keys.Control | Keys.Alt | Keys.D0)) { SetZoom(1f); return true; }
             if (keyData == Keys.Enter && _editor != null && !_editor.ContainsFocus && ActiveControl is ToolStrip)
             {
                 ActiveControl = _editor;
