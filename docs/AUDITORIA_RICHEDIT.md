@@ -87,8 +87,9 @@ Solo quedan referencias documentales o de prueba:
 | `RtfReader.cs` | Comentario sobre el comportamiento de RichEdit |
 | `RtfSanitizer.cs` | Comentario sobre RTF aceptado por RichEdit |
 | `RtfWriter.cs` | Comentario sobre el dialecto RTF |
+| `NativeDocumentEditor.cs` | `RichTextBox` superpuesto para editar celdas de tabla desde 0.0.12 |
 
-Ninguna de esas referencias crea un control RichEdit en la aplicación.
+El motor principal del documento no crea un control RichEdit. El editor de celda de tabla sí usa un `RichTextBox` superpuesto para mostrar el formato mientras se edita; no interviene en la paginación ni en el motor tipográfico.
 
 ## Verificación
 
@@ -107,4 +108,4 @@ RESULT: PASS
 
 ## Conclusión
 
-El código RichEdit **no se usaba en producción**. Era código heredado de una etapa anterior y una prueba engañosa. Se eliminó de forma estricta.
+El código RichEdit heredado **no se usaba en el motor principal**. Era una prueba engañosa y se eliminó de forma estricta. La edición de celdas de tabla usa un `RichTextBox` superpuesto de forma deliberada desde 0.0.12; es la única excepción y no afecta a la vista principal ni a la impresión.
