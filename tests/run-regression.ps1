@@ -115,6 +115,17 @@ try {
     try { & $cellFocusExe }
     finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { throw "cell focus smoke failed" }
+    $spellTableTest = Join-Path $PSScriptRoot "SpellTableSmoke.cs"
+    $spellTableExe = Join-Path $tmp "SpellTableSmoke.exe"
+    & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `
+        "/out:$spellTableExe" `
+        /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Xml.dll /r:System.Xml.Linq.dll `
+        $source $spellTableTest
+    if ($LASTEXITCODE -ne 0) { throw "spell table smoke compile failed" }
+    Push-Location $root
+    try { & $spellTableExe }
+    finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0) { throw "spell table smoke failed" }
     $securityTest = Join-Path $PSScriptRoot "SecuritySmoke.cs"
     $securityExe = Join-Path $tmp "SecuritySmoke.exe"
     & $csc /nologo /warn:4 /codepage:65001 /target:exe /main:P `

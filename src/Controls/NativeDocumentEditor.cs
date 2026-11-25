@@ -164,6 +164,7 @@ namespace WordPadClone.Controls
 		private sealed class LayoutTableCell
 		{
 			public TableCell Cell;
+			public int Paragraph;
 
 			public int Row;
 
@@ -384,6 +385,14 @@ namespace WordPadClone.Controls
 		private int _spellingStart;
 
 		private int _spellingLength;
+
+		private sealed class SpellTarget
+		{
+			public int Paragraph;
+			public int Row = -1;
+			public int Column = -1;
+			public string Text;
+		}
 
 		private sealed class FormattedRun
 		{
@@ -1967,6 +1976,7 @@ namespace WordPadClone.Controls
 						int num7 = Math.Max(1, Math.Min(tableCell.ColSpan, num - l));
 						LayoutTableCell layoutTableCell = new LayoutTableCell();
 						layoutTableCell.Cell = tableCell;
+						layoutTableCell.Paragraph = paragraphIndex;
 						layoutTableCell.Row = k;
 						layoutTableCell.Column = l;
 						layoutTableCell.X = layoutTable.X + (float)l * num3;
@@ -2829,10 +2839,58 @@ namespace WordPadClone.Controls
 					}
 					if (lineTop > bottom) break;
 				}
+				DrawTableCellSpellUnderlines(g, cell);
 			}
 			finally
 			{
 				g.Restore(state);
+			}
+		}
+
+		private void DrawTableCellSpellUnderlines(Graphics g, LayoutTableCell cell)
+		{
+			if (!_spellEnabled || _spellErrors.Count == 0 || cell == null || cell.Cell == null) return;
+			string text = cell.Cell.Text ?? string.Empty;
+			for (int i = 0; i < _spellErrors.Count; i++)
+			{
+				SpellError error = _spellErrors[i];
+				if (error.TableRow != cell.Row || error.TableColumn != cell.Column
+					|| error.Paragraph != cell.Paragraph || error.Start < 0 || error.Length <= 0
+					|| error.Start >= text.Length) continue;
+				int length = Math.Min(error.Length, text.Length - error.Start);
+				float x = cell.X + 4f;
+				float width = 0f;
+				cell.Cell.EnsureRuns();
+				int offset = 0;
+				for (int r = 0; r < cell.Cell.Runs.Count; r++)
+				{
+					TableCellRun run = cell.Cell.Runs[r];
+					int runLength = run.Text.Length;
+					if (error.Start + length <= offset) break;
+					RunFormat format = run.Format ?? cell.Cell.Format;
+					Font runFont = format == null ? GetFont(new RunFormat("Calibri", 21)) : GetFont(format);
+					if (error.Start < offset + runLength)
+					{
+						int from = Math.Max(0, error.Start - offset);
+						int to = Math.Min(runLength, error.Start + length - offset);
+						if (to > from)
+						{
+							x += g.MeasureString(run.Text.Substring(0, from), runFont).Width;
+							width += g.MeasureString(run.Text.Substring(from, to - from), runFont).Width;
+						}
+					}
+					else
+					{
+						x += g.MeasureString(run.Text, runFont).Width;
+					}
+					offset += runLength;
+				}
+				if (width > 0f)
+				{
+					float y = cell.Y + Math.Max(4f, cell.Height - 4f);
+					using (Pen pen = new Pen(Color.FromArgb(220, 30, 45), 1.2f))
+						g.DrawLine(pen, x, y, x + width, y);
+				}
 			}
 		}
 		private void DrawSpellingHighlight(Graphics g, LayoutPage page)
@@ -5044,15 +5102,69 @@ namespace WordPadClone.Controls
 			ScheduleSpellCheck();
 		}
 
+		private List<SpellTarget> CollectSpellTargets()
+		{
+			List<SpellTarget> targets = new List<SpellTarget>();
+			if (_document == null) return targets;
+			EnsureParagraphs();
+			for (int p = 0; p < _document.Paragraphs.Count; p++)
+			{
+				Paragraph paragraph = _document.Paragraphs[p];
+				if (paragraph.TableRows != null)
+				{
+					paragraph.EnsureTableCells();
+					if (paragraph.TableCells == null) continue;
+					for (int r = 0; r < paragraph.TableCells.Length; r++)
+					{
+						TableCell[] row = paragraph.TableCells[r];
+						if (row == null) continue;
+						for (int c = 0; c < row.Length; c++)
+						{
+							TableCell cell = row[c];
+							if (cell == null || cell.Covered) continue;
+							cell.SyncFromRuns();
+							if (string.IsNullOrEmpty(cell.Text)) continue;
+							SpellTarget target = new SpellTarget();
+							target.Paragraph = p;
+							target.Row = r;
+							target.Column = c;
+							target.Text = cell.Text;
+							targets.Add(target);
+						}
+					}
+				}
+				else
+				{
+					SpellTarget target = new SpellTarget();
+					target.Paragraph = p;
+					target.Text = GetText(paragraph);
+					targets.Add(target);
+				}
+			}
+			return targets;
+		}
+
 		public string[] GetSpellParagraphs()
 		{
-			EnsureParagraphs();
-			string[] array = new string[_document.Paragraphs.Count];
-			for (int i = 0; i < array.Length; i++)
+			List<SpellTarget> targets = CollectSpellTargets();
+			string[] values = new string[targets.Count];
+			for (int i = 0; i < targets.Count; i++) values[i] = targets[i].Text;
+			return values;
+		}
+
+		public void ResolveSpellTargets(List<SpellError> errors)
+		{
+			if (errors == null) return;
+			List<SpellTarget> targets = CollectSpellTargets();
+			for (int i = 0; i < errors.Count; i++)
 			{
-				array[i] = GetText(_document.Paragraphs[i]);
+				SpellError error = errors[i];
+				if (error == null || error.Paragraph < 0 || error.Paragraph >= targets.Count) continue;
+				SpellTarget target = targets[error.Paragraph];
+				error.Paragraph = target.Paragraph;
+				error.TableRow = target.Row;
+				error.TableColumn = target.Column;
 			}
-			return array;
 		}
 
 		public void ReplaceSpelling(int paragraph, int start, int length, string replacement)
@@ -5076,6 +5188,126 @@ namespace WordPadClone.Controls
 				_anchor = new CaretPos(_caret.P, _caret.Offset);
 				AfterEdit();
 			}
+		}
+
+		public bool ReplaceSpelling(SpellError error, string replacement)
+		{
+			if (error == null) return false;
+			if (error.TableRow < 0)
+			{
+				ReplaceSpelling(error.Paragraph, error.Start, error.Length, replacement);
+				return true;
+			}
+			TableCell cell = FindSpellCell(error.Paragraph, error.TableRow, error.TableColumn);
+			if (cell == null) return false;
+			if (IsEditingTableCell && _cellEdit != null && _cellEdit.Cell == cell)
+				CommitCellEditor(false);
+			return ReplaceCellRange(cell, error.Start, error.Length, replacement);
+		}
+
+		public void SelectSpellingError(SpellError error)
+		{
+			if (error == null) return;
+			if (error.TableRow < 0)
+			{
+				SelectSpellingRange(error.Paragraph, error.Start, error.Length);
+				return;
+			}
+			EnsureLayout();
+			LayoutTableCell target = FindLayoutSpellCell(error.Paragraph, error.TableRow, error.TableColumn);
+			if (target == null) return;
+			StartCellEditor(target);
+			if (_cellEditor != null)
+			{
+				int length = _cellEditor.TextLength;
+				_cellEditor.SelectionStart = Math.Max(0, Math.Min(length, error.Start));
+				_cellEditor.SelectionLength = Math.Max(0, Math.Min(length - _cellEditor.SelectionStart, error.Length));
+			}
+		}
+
+		private TableCell FindSpellCell(int paragraph, int row, int column)
+		{
+			if (paragraph < 0 || paragraph >= _document.Paragraphs.Count) return null;
+			Paragraph p = _document.Paragraphs[paragraph];
+			if (p.TableRows == null) return null;
+			p.EnsureTableCells();
+			if (p.TableCells == null || row < 0 || row >= p.TableCells.Length) return null;
+			if (p.TableCells[row] == null || column < 0 || column >= p.TableCells[row].Length) return null;
+			return p.TableCells[row][column];
+		}
+
+		private LayoutTableCell FindLayoutSpellCell(int paragraph, int row, int column)
+		{
+			for (int i = 0; i < _tables.Count; i++)
+			{
+				if (_tables[i].Paragraph != paragraph) continue;
+				for (int j = 0; j < _tables[i].Cells.Count; j++)
+				{
+					LayoutTableCell cell = _tables[i].Cells[j];
+					if (cell.Row == row && cell.Column == column) return cell;
+				}
+			}
+			return null;
+		}
+
+		private bool ReplaceCellRange(TableCell cell, int start, int length, string replacement)
+		{
+			if (cell == null) return false;
+			cell.EnsureRuns();
+			string original = cell.Text ?? string.Empty;
+			start = Math.Max(0, Math.Min(original.Length, start));
+			int end = Math.Max(start, Math.Min(original.Length, start + length));
+			string value = NormalizeText(replacement ?? string.Empty).Replace("\r", string.Empty).Replace("\n", " ");
+			PushUndo();
+			int offset = 0;
+			bool inserted = false;
+			List<TableCellRun> result = new List<TableCellRun>();
+			for (int i = 0; i < cell.Runs.Count; i++)
+			{
+				TableCellRun run = cell.Runs[i];
+				int runLength = run.Text.Length;
+				int localStart = Math.Max(0, start - offset);
+				int localEnd = Math.Min(runLength, end - offset);
+				if (localEnd <= localStart)
+				{
+					result.Add(run);
+				}
+				else
+				{
+					if (localStart > 0)
+					{
+						TableCellRun prefix = run.Clone();
+						prefix.Text = run.Text.Substring(0, localStart);
+						if (prefix.Format == null) prefix.Format = new RunFormat("Calibri", 21);
+						result.Add(prefix);
+					}
+					if (!inserted && value.Length > 0)
+					{
+						TableCellRun replacementRun = run.Clone();
+						replacementRun.Text = value;
+						if (replacementRun.Format == null) replacementRun.Format = new RunFormat("Calibri", 21);
+						result.Add(replacementRun);
+						inserted = true;
+					}
+					if (localEnd < runLength)
+					{
+						TableCellRun suffix = run.Clone();
+						suffix.Text = run.Text.Substring(localEnd);
+						if (suffix.Format == null) suffix.Format = new RunFormat("Calibri", 21);
+						result.Add(suffix);
+					}
+				}
+				offset += runLength;
+			}
+			if (!inserted && value.Length > 0)
+				result.Add(new TableCellRun(value, new RunFormat("Calibri", 21)));
+			cell.Runs.Clear();
+			cell.Runs.AddRange(result);
+			cell.SyncFromRuns();
+			InvalidateLayout(true);
+			OnTextChanged();
+			OnSelectionChanged();
+			return true;
 		}
 
 		public void InsertTable(string[][] rows)
@@ -8626,12 +8858,9 @@ namespace WordPadClone.Controls
 				return;
 			}
 			_spellUnavailableAttempts = 0;
-			string[] array = new string[_document.Paragraphs.Count];
-			for (int i = 0; i < _document.Paragraphs.Count; i++)
-			{
-				Paragraph paragraph = _document.Paragraphs[i];
-				array[i] = ((paragraph.TableRows == null) ? GetText(paragraph) : string.Empty);
-			}
+			List<SpellTarget> targets = CollectSpellTargets();
+			string[] array = new string[targets.Count];
+			for (int i = 0; i < targets.Count; i++) array[i] = targets[i].Text;
 			int version = ++_spellVersion;
 			_spellChecker.Check(array, version, delegate(int resultVersion, List<SpellError> errors)
 			{
@@ -8640,6 +8869,7 @@ namespace WordPadClone.Controls
 					_spellErrors.Clear();
 					if (errors != null)
 					{
+						ResolveSpellTargets(errors);
 						for (int j = 0; j < errors.Count; j++)
 						{
 							_spellErrors.Add(errors[j]);

@@ -13,6 +13,8 @@ namespace WordPadClone.Controls
         public int Start;
         public int Length;
         public string Word;
+        public int TableRow = -1;
+        public int TableColumn = -1;
     }
 
     /// <summary>

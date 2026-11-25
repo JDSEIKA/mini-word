@@ -202,3 +202,8 @@ Las pruebas cubren:
 - Las palabras largas se parten por caracteres cuando no caben.
 - La altura de la fila cuenta las líneas necesarias, no solo una.
 - Los tramos de distinto tamaño comparten línea base.
+### Ortografía en tablas
+
+- La revisión ortográfica incluye el texto de cada celda.
+- Las palabras dudosas se subrayan también dentro de la tabla.
+- El diálogo puede seleccionar una celda y reemplazar la palabra conservando el formato del tramo.

@@ -1,6 +1,6 @@
 # Mini Word — alcance de beta
 
-Versión de evaluación: 0.0.15 Beta
+Versión de evaluación: 0.0.16 Beta
 Fecha: 2026-11-15
 
 > **Actualización 0.0.8:** campos simples, índice, control de cambios, comparación, estilos y comentarios con respuestas están implementados. Los campos/TOC complejos de Word siguen siendo parciales.

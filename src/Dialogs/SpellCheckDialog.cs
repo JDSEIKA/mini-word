@@ -262,7 +262,7 @@ namespace WordPadClone.Dialogs
             if (_index >= _errors.Count) _index = _errors.Count - 1;
             SpellError error = _errors[_index];
             SetWordText(error.Word);
-            _editor.SelectSpellingRange(error.Paragraph, error.Start, error.Length);
+            _editor.SelectSpellingError(error);
             _editor.Refresh();
             _status.Text = "Sugerencia " + (_index + 1) + " de " + _errors.Count;
             SetButtons(true);
@@ -284,7 +284,7 @@ namespace WordPadClone.Dialogs
             string replacement = _replacement.Text.Trim();
             if (replacement.Length == 0) return;
             SpellError error = _errors[_index];
-            _editor.ReplaceSpelling(error.Paragraph, error.Start, error.Length, replacement);
+            _editor.ReplaceSpelling(error, replacement);
             Recheck();
         }
 
